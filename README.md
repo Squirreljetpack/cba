@@ -1,0 +1,1 @@
+# CBA [![Crates.io](https://img.shields.io/crates/v/cli_boilerplate_automation)](https://crates.io/crates/cli_boilerplate_automation) [![License](https://img.shields.io/github/license/squirreljetpack/cba)](https://github.com/squirreljetpack/cba/blob/main/LICENSE)
