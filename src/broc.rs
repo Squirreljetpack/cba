@@ -1,13 +1,13 @@
 //! Utilities for (spawning) processes
 
-use crate::{bog::BogOkExt, ebog, bait::ResultExt};
+use crate::{_log, bait::ResultExt, bog::BogOkExt, ebog};
 use cfg_if::cfg_if;
 use std::{
     env, ffi::{OsStr, OsString}, process::{Child, ChildStdout, Command, Stdio}, sync::LazyLock
 };
 
 /// Execute script using shell.
-/// 
+/// Logs the executable in debug builds
 /// Prints error.
 pub fn spawn_script(
     script: &str,
@@ -17,48 +17,49 @@ pub fn spawn_script(
     stderr: Stdio,
 ) -> Option<Child> {
     let (shell, arg) = &*SHELL;
-
+    _log!("Spawning script: {script}");
+    
     Command::new(shell)
-        .arg(arg)
-        .arg(script)
-        .envs(vars)
-        .stdin(stdin)
-        .stdout(stdout)
-        .stderr(stderr)
-        .spawn()
-        .prefix_err(&format!("Could not spawn: {script}"))
-        ._ebog()
+    .arg(arg)
+    .arg(script)
+    .envs(vars)
+    .stdin(stdin)
+    .stdout(stdout)
+    .stderr(stderr)
+    .spawn()
+    .prefix_err(&format!("Could not spawn: {script}"))
+    ._ebog()
 }
 
 /// Become script.
-/// 
+/// Logs the executable in debug builds
 /// Prints error.
 pub fn exec_script(script: &str, vars: impl IntoIterator<Item = (String, String)>) -> ! {
     let (shell, arg) = &*SHELL;
-
+    
     let mut cmd = Command::new(shell);
     cmd.arg(arg).arg(script).envs(vars);
-
+    _log!("Spawning detached: {cmd:?}");
+    
     #[cfg(not(windows))]
     {
         // replace current process
-
         use std::os::unix::process::CommandExt;
         let err = cmd.exec();
         use std::process::exit;
-
+        
         ebog!("Could not exec {script:?}: {err}");
         exit(1);
     }
-
+    
     #[cfg(windows)]
     {
         match command.status() {
             Ok(status) => {
                 exit(
                     status
-                        .code()
-                        .unwrap_or(if status.success() { 0 } else { 1 }),
+                    .code()
+                    .unwrap_or(if status.success() { 0 } else { 1 }),
                 );
             }
             Err(err) => {
@@ -69,62 +70,72 @@ pub fn exec_script(script: &str, vars: impl IntoIterator<Item = (String, String)
     }
 }
 
-/// One-off spawn executable
-/// 
-/// Prints error.
-pub fn spawn_detached(cmd: &mut Command) -> Option<Child> {
-    let err_prefix = format!(
-        "Failed to spawn: {}",
-        format_sh_command({
-            let mut inputs = vec![cmd.get_program()];
-            inputs.extend(cmd.get_args());
-            inputs
-        })
-        .to_string_lossy()
-    );
+#[easy_ext::ext(CommandExt)]
+impl Command
+{
+    /// One-off spawn executable
+    /// Logs the command in debug builds
+    /// Prints error.
+    pub fn spawn_detached(&mut self) -> Option<Child> {
+        let cmd = self;
 
-    cmd.stdin(Stdio::null())
+        let err_prefix = format!(
+            "Failed to spawn: {}",
+            format_sh_command({
+                let mut inputs = vec![cmd.get_program()];
+                inputs.extend(cmd.get_args());
+                inputs
+            })
+            .to_string_lossy()
+        );
+        _log!("Spawning detached: {cmd:?}");
+        
+        cmd.stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null());
-
-    cfg_if! {
-        if #[cfg(unix)] {
-            use std::os::unix::process::CommandExt;
-
-            unsafe {
-                cmd.pre_exec(|| {
-                    libc::setsid(); // continue even if setsid fails
-                    Ok(())
-                });
+        
+        cfg_if! {
+            if #[cfg(unix)] {
+                use std::os::unix::process::CommandExt;
+                
+                unsafe {
+                    cmd.pre_exec(|| {
+                        libc::setsid(); // continue even if setsid fails
+                        Ok(())
+                    });
+                }
+            } else if #[cfg(windows)] {
+                use std::os::windows::process::CommandExt;
+                
+                const DETACHED_PROCESS: u32 = 0x00000008;
+                const CREATE_NEW_PROCESS_GROUP: u32 = 0x00000200;
+                
+                cmd.creation_flags(DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP);
+            } else {
+                return None;
             }
-        } else if #[cfg(windows)] {
-            use std::os::windows::process::CommandExt;
-
-            const DETACHED_PROCESS: u32 = 0x00000008;
-            const CREATE_NEW_PROCESS_GROUP: u32 = 0x00000200;
-
-            cmd.creation_flags(DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP);
-        } else {
-            return None;
         }
+        
+        cmd.spawn().prefix_err(&err_prefix)._ebog()
     }
-
-    cmd.spawn().prefix_err(&err_prefix)._ebog()
-}
-
-/// Spawn command with piped stdout
-pub fn spawn_piped(cmd: &mut Command) -> Result<ChildStdout, String> {
-    let err_prefix = format!(
-        "Failed to spawn: {}",
-        format_sh_command({
-            let mut inputs = vec![cmd.get_program()];
-            inputs.extend(cmd.get_args());
-            inputs
-        })
-        .to_string_lossy()
-    );
-
-    match cmd
+    
+    /// Spawn command with piped stdout
+    /// Logs the command in debug builds
+    pub fn spawn_piped(&mut self) -> Result<ChildStdout, String> {
+        let cmd = self;
+        
+        let err_prefix = format!(
+            "Failed to spawn: {}",
+            format_sh_command({
+                let mut inputs = vec![cmd.get_program()];
+                inputs.extend(cmd.get_args());
+                inputs
+            })
+            .to_string_lossy()
+        );
+        _log!("Spawning piped: {cmd:?}");
+        
+        match cmd
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::null())
@@ -132,11 +143,23 @@ pub fn spawn_piped(cmd: &mut Command) -> Result<ChildStdout, String> {
         .prefix_err(&err_prefix)?
         .stdout
         .take()
-    {
-        Some(s) => Ok(s),
-        None => Err(err_prefix), // stdout failure has no reason suffix
+        {
+            Some(s) => Ok(s),
+            None => Err(err_prefix), // stdout failure has no reason suffix
+        }
+    }
+    
+    /// Naive check of whether a command succeeds. (i.e. health check)
+    pub fn success(&mut self) -> bool {
+        self
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .map(|status| status.success())
+        .unwrap_or(false)
     }
 }
+
 
 /// Join arguments into a single string
 /// Non-UTF-8 arguments are not escaped
@@ -144,15 +167,15 @@ pub fn spawn_piped(cmd: &mut Command) -> Result<ChildStdout, String> {
 pub fn format_sh_command(inputs: Vec<impl AsRef<OsStr>>) -> OsString {
     let mut cmd = OsString::new();
     let mut first = true;
-
+    
     for arg in inputs {
         if !first {
             cmd.push(" ");
         }
         first = false;
-
+        
         let os = arg.as_ref();
-
+        
         match os.to_str() {
             Some(s) => {
                 // shell-escape only when valid UTF-8
@@ -166,7 +189,7 @@ pub fn format_sh_command(inputs: Vec<impl AsRef<OsStr>>) -> OsString {
             }
         }
     }
-
+    
     cmd
 }
 

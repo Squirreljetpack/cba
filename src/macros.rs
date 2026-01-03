@@ -178,3 +178,16 @@ macro_rules! prints {
         )+
     }};
 }
+
+#[macro_export]
+// Easier than format! to concatenate strings
+macro_rules! cats {
+    ( $( $x:expr ),* $(,)? ) => {{
+        let mut s = String::new();
+        $(
+            use std::fmt::Write;
+            write!(&mut s, "{}", $x).unwrap();
+        )*
+        s
+    }};
+}

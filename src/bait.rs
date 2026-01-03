@@ -41,7 +41,7 @@ pub impl<T, E> Result<T, E> {
         }
     }
     /// Convert Err(e) to the string '{prefix}: {e}'
-    fn prefix_err(self, prefix: &str) -> Result<T, String>
+    fn prefix_err(self, prefix: impl Display) -> Result<T, String>
     where
     E: std::fmt::Display,
     {
@@ -50,7 +50,17 @@ pub impl<T, E> Result<T, E> {
             Err(e) => Err(format!("{prefix}: {e}")),
         }
     }
-
+    
+    fn context(self, prefix: impl Display) -> anyhow::Result<T>
+    where
+    E: std::fmt::Display,
+    {
+        match self {
+            Ok(val) => Ok(val),
+            Err(e) => Err(anyhow::anyhow!("{prefix}: {e}")),
+        }
+    }
+    
     // logging
     
     /// Log the error.
@@ -121,6 +131,27 @@ pub impl<T> Option<T> {
             log::error!("{s}");
         }
         self.unwrap()
+    }
+    
+    fn elog<E: Display>(self, err: E) -> Result<T, E>
+    {
+        match self {
+            Some(v) => Ok(v),
+            None => {
+                log::error!("{err}");
+                Err(err)
+            }
+        }
+    }
+    
+    fn context<E: Display>(self, err: E) -> anyhow::Result<T>
+    {
+        match self {
+            Some(v) => Ok(v),
+            None => {
+                Err(anyhow::anyhow!("{err}"))
+            }
+        }
     }
 }
 
