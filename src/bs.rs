@@ -1,7 +1,7 @@
 //! Filesystem set, check, read
-use crate::bog::BogOkExt;
 use crate::bait::ResultExt as _;
-use crate::{ebog, ibog, else_default};
+use crate::bog::BogOkExt;
+use crate::{ebog, else_default, ibog};
 use std::cmp::Ordering;
 use std::io;
 use std::path::PathBuf;
@@ -20,7 +20,7 @@ pub fn is_executable(path: impl AsRef<Path>) -> bool {
 
     #[cfg(unix)]
     {
-        let metadata = else_default!(std::fs::metadata(path).prefix_err(&error_prefix)._ebog());
+        let metadata = else_default!(std::fs::metadata(path).prefix(&error_prefix)._ebog());
         use std::os::unix::fs::PermissionsExt;
         metadata.permissions().mode() & 0o111 != 0
     }
@@ -28,10 +28,10 @@ pub fn is_executable(path: impl AsRef<Path>) -> bool {
     #[cfg(windows)]
     {
         let ext = path
-        .extension()
-        .and_then(|e| e.to_str())
-        .unwrap_or_default()
-        .to_ascii_lowercase();
+            .extension()
+            .and_then(|e| e.to_str())
+            .unwrap_or_default()
+            .to_ascii_lowercase();
         matches!(ext.as_str(), "exe" | "bat" | "cmd" | "com")
     }
 
@@ -86,9 +86,9 @@ pub fn permissions(path: &Path) -> [bool; 3] {
         };
         let mode = metadata.permissions().mode();
         [
-        mode & 0o400 != 0, // read
-        mode & 0o200 != 0, // write
-        mode & 0o100 != 0, // exec
+            mode & 0o400 != 0, // read
+            mode & 0o200 != 0, // write
+            mode & 0o100 != 0, // exec
         ]
     }
     #[cfg(windows)]
@@ -99,10 +99,10 @@ pub fn permissions(path: &Path) -> [bool; 3] {
         };
         let readonly = metadata.permissions().readonly();
         let ext = path
-        .extension()
-        .and_then(|e| e.to_str())
-        .unwrap_or_default()
-        .to_ascii_lowercase();
+            .extension()
+            .and_then(|e| e.to_str())
+            .unwrap_or_default()
+            .to_ascii_lowercase();
         let executable = matches!(ext.as_str(), "exe" | "bat" | "cmd" | "com");
         [true, !readonly, executable]
     }
@@ -119,7 +119,7 @@ pub fn is_symlink(path: impl AsRef<Path>) -> bool {
     let path = path.as_ref();
     let error_prefix = format!("Failed to check metadata of {path:?}");
 
-    let meta = else_default!(fs::symlink_metadata(path).prefix_err(&error_prefix)._ebog());
+    let meta = else_default!(fs::symlink_metadata(path).prefix(&error_prefix)._ebog());
     meta.file_type().is_symlink()
 }
 
@@ -163,7 +163,6 @@ pub fn symlink(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> Result<(), std::
     Ok(())
 }
 
-
 // ---------- DIRECTORIES -----------------
 /// Create a directory if it doesn't exist.
 ///
@@ -205,7 +204,10 @@ pub fn create_dir(dir: impl AsRef<Path>) -> bool {
 ///   true
 /// }).prefix_err(&err_prefix).or_err();
 /// ```
-pub fn clear_dir(dir: impl AsRef<Path>, filter: impl Fn(&DirEntry) -> bool) -> Result<(), io::Error> {
+pub fn clear_dir(
+    dir: impl AsRef<Path>,
+    filter: impl Fn(&DirEntry) -> bool,
+) -> Result<(), io::Error> {
     let path = dir.as_ref();
 
     if !path.exists() {
@@ -236,18 +238,18 @@ pub impl<T: AsRef<Path>> T {
     fn is_empty_dir(&self) -> bool {
         let path = self.as_ref();
         fs::read_dir(path)
-        .map(|mut entries| entries.next().is_none())
-        .unwrap_or(false)
+            .map(|mut entries| entries.next().is_none())
+            .unwrap_or(false)
     }
 }
 
-/// Sort paths by modification time (oldest first).
+/// Sort paths by modification time (newest first).
 pub fn sort_by_mtime(paths: &mut Vec<PathBuf>) {
     paths.sort_by(|a, b| {
         let ma = fs::metadata(a).and_then(|m| m.modified());
         let mb = fs::metadata(b).and_then(|m| m.modified());
         match (ma, mb) {
-            (Ok(a), Ok(b)) => a.cmp(&b),
+            (Ok(a), Ok(b)) => b.cmp(&a),
             (Ok(_), Err(_)) => Ordering::Less,
             (Err(_), Ok(_)) => Ordering::Greater,
             (Err(_), Err(_)) => Ordering::Equal,

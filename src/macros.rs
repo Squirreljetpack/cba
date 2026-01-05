@@ -124,7 +124,6 @@ macro_rules! _dbg {
     }};
 }
 
-
 /// Prints to stderr like `eprintln!` but only in debug builds
 #[macro_export]
 macro_rules! _eprint {
@@ -146,7 +145,6 @@ macro_rules! _log {
         }
     };
 }
-
 
 // -------------------------------
 

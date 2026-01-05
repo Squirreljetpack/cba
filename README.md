@@ -17,7 +17,7 @@ The logger can be configured at runtime to filter, downcast, pause and forward t
 Additionally, `format!`-like macros are provided: `ebog!("{my_content}"; "{optional_tag}")`.
 
 #### Extension traits for unwrapping
-The extension traits and logging macros follow a general naming pattern of `{level}{bog/log}`.
+The extension traits and logging macros follow a general naming pattern of `{level}{bog/log}`. For example, `result.elog()` calls `log::error!` on the error.
 Each such function also has a variant whose name is prefixed with `_` which consumes the error, downgrading `Results` to `Options`, and `Option<T>` to `T` (or else exiting the program with code 1).
 `prefix_err()` can be used to add context to the error.
 

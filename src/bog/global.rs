@@ -38,7 +38,7 @@ fn init_(logger: Box<dyn BogFmter + Send + Sync>, write: Box<dyn Write + Send + 
         tag_override: None,
         log: None,
     };
-    
+
     *GLOBAL_BOGGER.lock().unwrap() = Some(bogger);
 }
 // -------- (Internal) methods on global  ----------
@@ -52,7 +52,7 @@ impl GLOBAL_BOGGER_STRUCT {
         if pri > self.downcast_to.0 {
             level = self.downcast_to.1;
         }
-        
+
         if self.log != Some(false) {
             let level = match level {
                 BogLevel::ERROR => Some(log::Level::Error),
@@ -69,7 +69,7 @@ impl GLOBAL_BOGGER_STRUCT {
         if self.log != Some(true) {
             // Determine effective tag
             let effective_tag = self.tag_override.as_deref().unwrap_or(tag);
-            
+
             // Format message with prefix and suffix
             let mut formatted = if !self.prefix.is_empty() {
                 let mut prefixed_msg = self.prefix.clone();
@@ -78,37 +78,37 @@ impl GLOBAL_BOGGER_STRUCT {
             } else {
                 self.formatter.format(level, effective_tag, msg)
             };
-            
+
             if !self.suffix.is_empty() {
                 formatted.push_str(&self.suffix);
             }
             formatted.push('\n');
-            
+
             // Write to writer
             let _ = self.writer.write_all(formatted.as_bytes());
         }
     }
-    
+
     fn pause(&mut self) {
         self.min_level.0 = u8::MAX;
     }
-    
+
     fn resume(&mut self) {
         self.min_level.0 = self.formatter.priority(&self.min_level.1)
     }
-    
+
     fn filter_below(&mut self, lvl: BogLevel) {
         self.min_level = (self.formatter.priority(&lvl), lvl);
     }
-    
+
     fn downcast_above(&mut self, lvl: BogLevel) {
         self.downcast_to = (self.formatter.priority(&lvl), lvl);
     }
-    
+
     fn bounds(&self) -> ((u8, BogLevel), (u8, BogLevel)) {
         (self.min_level, self.downcast_to)
     }
-    
+
     pub fn set_bounds(&mut self, bounds: ((u8, BogLevel), (u8, BogLevel))) {
         self.min_level = bounds.0;
         self.downcast_to = bounds.1;
@@ -143,37 +143,37 @@ impl BogContext {
             log: None,
         }
     }
-    
+
     pub fn upper(mut self, level: BogLevel) -> Self {
         self.bounds[1] = Some(level);
         self
     }
-    
+
     pub fn lower(mut self, level: BogLevel) -> Self {
         self.bounds[0] = Some(level);
         self
     }
-    
+
     pub fn pause(mut self, pause: bool) -> Self {
         self.pause = pause;
         self
     }
-    
+
     pub fn prefix<S: Into<String>>(mut self, prefix: S) -> Self {
         self.prefix = Some(prefix.into());
         self
     }
-    
+
     pub fn suffix<S: Into<String>>(mut self, suffix: S) -> Self {
         self.suffix = Some(suffix.into());
         self
     }
-    
+
     pub fn tag<S: Into<String>>(mut self, tag: S) -> Self {
         self.tag_override = Some(tag.into());
         self
     }
-    
+
     pub fn log(mut self, log: Option<bool>) -> Self {
         self.log = log;
         self
@@ -196,7 +196,7 @@ impl BOGGER {
             }
         }
     }
-    
+
     /// Set the minimum level to log.
     #[inline]
     pub fn filter_below(lvl: BogLevel) {
@@ -206,7 +206,7 @@ impl BOGGER {
             }
         }
     }
-    
+
     /// Downcast messages above the given level to this level.
     #[inline]
     pub fn downcast_above(lvl: BogLevel) {
@@ -216,57 +216,57 @@ impl BOGGER {
             }
         }
     }
-    
+
     /// Temporarily apply a BogContext while executing a closure.
     #[inline]
     pub fn with<T>(context: BogContext, f: impl FnOnce() -> T) -> T {
         let (prev_bounds, prev_paused, prev_prefix, prev_suffix, prev_tag) =
-        if let Ok(mut guard) = GLOBAL_BOGGER.lock() {
-            if let Some(b) = guard.as_mut() {
-                // Save previous state
-                let prev_bounds = b.bounds();
-                let prev_paused = prev_bounds.0.0 == u8::MAX;
-                let prev_prefix = b.prefix.clone();
-                let prev_suffix = b.suffix.clone();
-                let prev_tag = b.tag_override.clone();
-                
-                // Apply new context
-                if let Some(level) = context.bounds[0] {
-                    b.filter_below(level);
+            if let Ok(mut guard) = GLOBAL_BOGGER.lock() {
+                if let Some(b) = guard.as_mut() {
+                    // Save previous state
+                    let prev_bounds = b.bounds();
+                    let prev_paused = prev_bounds.0.0 == u8::MAX;
+                    let prev_prefix = b.prefix.clone();
+                    let prev_suffix = b.suffix.clone();
+                    let prev_tag = b.tag_override.clone();
+
+                    // Apply new context
+                    if let Some(level) = context.bounds[0] {
+                        b.filter_below(level);
+                    }
+                    if let Some(level) = context.bounds[1] {
+                        b.downcast_above(level);
+                    }
+                    if let Some(ref prefix) = context.prefix {
+                        b.prefix = prefix.clone();
+                    }
+                    if let Some(ref suffix) = context.suffix {
+                        b.suffix = suffix.clone();
+                    }
+                    if let Some(ref tag) = context.tag_override {
+                        b.tag_override = Some(tag.clone());
+                    }
+                    if context.pause {
+                        b.pause();
+                    }
+
+                    (
+                        Some(prev_bounds),
+                        Some(prev_paused),
+                        Some(prev_prefix),
+                        Some(prev_suffix),
+                        prev_tag,
+                    )
+                } else {
+                    (None, None, None, None, None)
                 }
-                if let Some(level) = context.bounds[1] {
-                    b.downcast_above(level);
-                }
-                if let Some(ref prefix) = context.prefix {
-                    b.prefix = prefix.clone();
-                }
-                if let Some(ref suffix) = context.suffix {
-                    b.suffix = suffix.clone();
-                }
-                if let Some(ref tag) = context.tag_override {
-                    b.tag_override = Some(tag.clone());
-                }
-                if context.pause {
-                    b.pause();
-                }
-                
-                (
-                    Some(prev_bounds),
-                    Some(prev_paused),
-                    Some(prev_prefix),
-                    Some(prev_suffix),
-                    prev_tag,
-                )
             } else {
-                (None, None, None, None, None)
-            }
-        } else {
-            Default::default()
-        };
-        
+                Default::default()
+            };
+
         // Execute the closure
         let result = f();
-        
+
         // Restore previous state
         if let Ok(mut guard) = GLOBAL_BOGGER.lock() {
             if let Some(b) = guard.as_mut() {
@@ -293,10 +293,10 @@ impl BOGGER {
                 }
             }
         }
-        
+
         result
     }
-    
+
     /// Execute a closure while pausing logging.
     #[inline]
     pub fn paused<T>(f: impl FnOnce() -> T) -> T {
@@ -305,7 +305,7 @@ impl BOGGER {
         BOGGER::resume();
         ret
     }
-    
+
     /// Pause logging.
     #[inline]
     pub fn pause() {
@@ -315,7 +315,7 @@ impl BOGGER {
             }
         }
     }
-    
+
     /// Resume logging.
     #[inline]
     pub fn resume() {
@@ -334,7 +334,7 @@ pub fn init_bogger(fg: bool, output_stderr: bool) {
     } else {
         Box::new(stdout())
     };
-    
+
     if fg {
         init_(Box::new(Fg {}), writer);
     } else {
@@ -358,7 +358,7 @@ pub fn init_filter(verbosity: u8) {
         1 => BOGGER::filter_below(BogLevel::WARN),
         2 => BOGGER::filter_below(BogLevel::INFO),
         3 => BOGGER::filter_below(BogLevel::DEBUG),
-        4 => BOGGER::filter_below(BogLevel::DNOTE),
+        4 => BOGGER::filter_below(BogLevel::EMPTY),
         _ => BOGGER::filter_below(BogLevel::ALL),
     }
 }
@@ -457,17 +457,17 @@ macro_rules! nbog {
 }
 
 #[macro_export]
-macro_rules! dnbog {
+macro_rules! mbog {
     ($($harg:expr),* ; $($arg:expr),*) => {{
         $crate::BOGGER::bog(
-            $crate::bog::BogLevel::DNOTE,
+            $crate::bog::BogLevel::EMPTY,
             &format!($($harg),*),
             &format!($($arg),*),
         );
     }};
     ($($arg:expr),*) => {{
         $crate::BOGGER::bog(
-            $crate::bog::BogLevel::DNOTE,
+            $crate::bog::BogLevel::EMPTY,
             "",
             &format!($($arg),*),
         );
@@ -522,29 +522,44 @@ pub impl<T, E: Display> Result<T, E> {
             }
         }
     }
-    
+
     fn _ebog_<'a>(self, tag: impl Into<Cow<'a, str>>) -> Option<T> {
         self._bog_(BogLevel::ERROR, tag)
     }
-    
+
+    fn _ibog_<'a>(self, tag: impl Into<Cow<'a, str>>) -> Option<T> {
+        self._bog_(BogLevel::INFO, tag)
+    }
+
+    fn _dbog_<'a>(self, tag: impl Into<Cow<'a, str>>) -> Option<T> {
+        self._bog_(BogLevel::DEBUG, tag)
+    }
+
     fn _wbog_<'a>(self, tag: impl Into<Cow<'a, str>>) -> Option<T> {
         self._bog_(BogLevel::WARN, tag)
     }
-    
+
     fn _bog(self, level: BogLevel) -> Option<T> {
         self._bog_(level, "")
     }
-    
+
     fn _ebog(self) -> Option<T> {
         self._ebog_("")
     }
-    
+
     fn __ebog(self) -> T {
         self._ebog_("").or_exit()
     }
-    
+
     fn _wbog(self) -> Option<T> {
         self._wbog_("")
+    }
+
+    fn _dbog(self) -> Option<T> {
+        self._dbog_("")
+    }
+    fn _ibog(self) -> Option<T> {
+        self._ibog_("")
     }
 }
 
@@ -565,121 +580,144 @@ pub impl<T> Option<T> {
             }
         }
     }
-    
+
     /// Unwrap or bog and exit
     fn _bog<'a>(self, level: BogLevel, msg: impl Into<Cow<'a, str>>) -> T {
         self._bog_(level, "", msg)
     }
-    
+
     /// Unwrap or err and exit
     fn _ebog<'a>(self, msg: impl Into<Cow<'a, str>>) -> T {
         self._bog(BogLevel::ERROR, msg)
     }
-    
+
     /// Unwrap or err and exit
     fn _ebog_<'a>(self, tag: impl Into<Cow<'a, str>>, msg: impl Into<Cow<'a, str>>) -> T {
         self._bog_(BogLevel::ERROR, tag, msg)
+    }
+
+    fn bog_<'a>(
+        self,
+        level: BogLevel,
+        tag: impl Into<Cow<'a, str>>,
+        msg: impl Into<Cow<'a, str>>,
+    ) -> Option<T> {
+        match self {
+            Some(val) => Some(val),
+            None => {
+                BOGGER::bog(level, &tag.into(), &msg.into());
+                None
+            }
+        }
+    }
+    fn bog<'a>(self, level: BogLevel, msg: impl Into<Cow<'a, str>>) -> Option<T> {
+        self.bog_(level, "", msg)
+    }
+    fn ebog<'a>(self, msg: impl Into<Cow<'a, str>>) -> Option<T> {
+        self.bog(BogLevel::ERROR, msg)
+    }
+    fn ebog_<'a>(self, msg: impl Into<Cow<'a, str>>) -> Option<T> {
+        self.bog(BogLevel::ERROR, msg)
     }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
-    
+
     #[test]
     fn show_fg_bogger() {
         init_bogger(true, false);
         // DEBUG messages
         dbog!("DEBUG message: {}", 3.14159);
         dbog!("val"; "DEBUG values: x={}, y={}", 10, 20);
-        
+
         // INFO messages
         ibog!("INFO message: {}", 42);
         ibog!("Created Directory"; "~/archr/Desktop");
-        
+
         // WARN messages
         wbog!("WARN message: {}", "disk almost full");
         wbog!("NoSpace"; "WARN message: {} attempts left", 3);
-        
+
         // ERROR messages
         ebog!("ERROR message: {}", "file not found");
         ebog!("404"; "Not found");
-        
+
         // NOTE messages
         nbog!("justification");
         nbog!("NOTE"; "ancillary");
-        dnbog!("justification");
-        dnbog!("DNOTE"; "ancillary");
-        
+        mbog!("justification");
+        mbog!("FULL TAG"; "ancillary");
+
         // CUSTOM / NOTE-like messages using cbog
         cbog!("NOTE"; "Custom note message: {}", "all good");
         cbog!("NOTE"; ""; "Custom note with tag: {}", 123);
         cbog!("CUSTOM"; "Custom discriminant"; "Message with both tag and content");
     }
-    
+
     #[test]
     fn show_bg_bogger() {
         init_bogger(false, true);
         // DEBUG messages
         dbog!("DEBUG message: {}", 3.14159);
         dbog!("val"; "DEBUG values: x={}, y={}", 10, 20);
-        
+
         // INFO messages
         ibog!("INFO message: {}", 42);
         ibog!("Urgent"; "INFO message number {}", 7);
-        
+
         // WARN messages
         wbog!("WARN message: {}", "disk almost full");
         wbog!("NoSpace"; "WARN message: {} attempts left", 3);
-        
+
         // ERROR messages
         ebog!("ERROR message: {}", "file not found");
         ebog!("404"; "Not found");
-        
+
         // NOTE messages
         nbog!("justification");
         nbog!("NOTE"; "ancillary");
-        dnbog!("justification");
-        dnbog!("DNOTE"; "ancillary");
-        
+        mbog!("justification");
+        mbog!("FULL"; "ancillary");
+
         // CUSTOM
         cbog!("NOTE"; "Custom note message: {}", "all good");
         cbog!("NOTE"; ""; "Custom note with tag: {}", 123);
         cbog!("CUSTOM"; "Custom discriminant"; "Message with both tag and content");
     }
-    
+
     #[test]
     fn min_level_and_downcast_combined() {
         init_bogger(true, false);
-        
+
         // drop DEBUG/INFO entirely
         BOGGER::filter_below(/* WARN priority */ BogLevel::INFO);
         // downcast ERROR to WARN
         BOGGER::downcast_above(BogLevel::WARN);
-        
+
         dbog!("debug filtered");
         ibog!("info normal");
         ebog!("error shown as warn");
     }
 }
 
-
 // ----------------------------------------------------------
 impl fmt::Debug for GLOBAL_BOGGER_STRUCT {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut ds = f.debug_struct("GLOBAL_BOGGER_STRUCT");
-        
+
         ds.field("min_level", &self.min_level)
-        .field("downcast_to", &self.downcast_to)
-        .field("prefix", &self.prefix)
-        .field("suffix", &self.suffix)
-        .field("tag_override", &self.tag_override)
-        .field("log", &self.log);
-        
+            .field("downcast_to", &self.downcast_to)
+            .field("prefix", &self.prefix)
+            .field("suffix", &self.suffix)
+            .field("tag_override", &self.tag_override)
+            .field("log", &self.log);
+
         // Opaque fields (trait objects / non-debuggable)
         ds.field("formatter", &"dyn BogFmter")
-        .field("writer", &"dyn Write");
-        
+            .field("writer", &"dyn Write");
+
         ds.finish()
     }
 }

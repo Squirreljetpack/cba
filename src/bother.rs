@@ -1,9 +1,9 @@
 use log::LevelFilter;
 pub fn level_filter_from_env() -> LevelFilter {
     match std::env::var("RUST_LOG")
-    .ok()
-    .map(|s| s.to_lowercase())
-    .as_deref()
+        .ok()
+        .map(|s| s.to_lowercase())
+        .as_deref()
     {
         Some("trace") => LevelFilter::Trace,
         Some("debug") => LevelFilter::Debug,

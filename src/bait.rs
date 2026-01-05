@@ -3,7 +3,7 @@ use std::fmt::Display;
 #[easy_ext::ext(MaybeExt)]
 pub impl<T> T
 where
-T: Sized,
+    T: Sized,
 {
     /// Merge from maybe by taking.
     fn maybe_take(&mut self, maybe: Option<T>) {
@@ -11,11 +11,11 @@ T: Sized,
             *self = v;
         }
     }
-    
+
     /// Merge from maybe by cloning.
     fn maybe_clone(&mut self, maybe: &Option<T>)
     where
-    T: Clone,
+        T: Clone,
     {
         if let Some(v) = maybe {
             *self = v.clone();
@@ -32,54 +32,55 @@ pub impl<T, E> Result<T, E> {
     /// Difficult to used with ?, more useful in return statements.
     fn cast<F, S>(self) -> Result<S, F>
     where
-    F: From<E>,
-    S: From<T>,
+        F: From<E>,
+        S: From<T>,
     {
         match self {
             Ok(s) => Ok(s.into()),
-            Err(e) => Err(e.into())
+            Err(e) => Err(e.into()),
         }
     }
+    // debated between prefix and prefix_err, chose the first because anyhow just calls it context
     /// Convert Err(e) to the string '{prefix}: {e}'
-    fn prefix_err(self, prefix: impl Display) -> Result<T, String>
+    fn prefix(self, prefix: impl Display) -> Result<T, String>
     where
-    E: std::fmt::Display,
+        E: std::fmt::Display,
     {
         match self {
             Ok(val) => Ok(val),
             Err(e) => Err(format!("{prefix}: {e}")),
         }
     }
-    
+
     fn context(self, prefix: impl Display) -> anyhow::Result<T>
     where
-    E: std::fmt::Display,
+        E: std::fmt::Display,
     {
         match self {
             Ok(val) => Ok(val),
             Err(e) => Err(anyhow::anyhow!("{prefix}: {e}")),
         }
     }
-    
+
     // logging
-    
+
     /// Log the error.
-    /// See also: [`ResultExt::prefix_err`].
+    /// See also: [`ResultExt::prefix`].
     fn elog(self) -> Result<T, E>
     where
-    E: Display
+        E: Display,
     {
         self.map_err(|e| {
             log::error!("{e}");
             e
         })
     }
-    
+
     /// [`elog`], then consume the error.
     /// See also: [`crate::bog::BogOkExt`].
     fn _elog(self) -> Option<T>
     where
-    E: Display
+        E: Display,
     {
         match self {
             Ok(x) => Some(x),
@@ -89,20 +90,20 @@ pub impl<T, E> Result<T, E> {
             }
         }
     }
-    
+
     fn wlog(self) -> Result<T, E>
     where
-    E: Display
+        E: Display,
     {
         self.map_err(|e| {
             log::warn!("{e}");
             e
         })
     }
-    
+
     fn _wlog(self) -> Option<T>
     where
-    E: Display
+        E: Display,
     {
         match self {
             Ok(x) => Some(x),
@@ -125,16 +126,15 @@ pub impl<T> Option<T> {
             }
         }
     }
-    
+
     fn _elog(self, s: &str) -> T {
         if self.is_none() {
             log::error!("{s}");
         }
         self.unwrap()
     }
-    
-    fn elog<E: Display>(self, err: E) -> Result<T, E>
-    {
+
+    fn elog<E: Display>(self, err: E) -> Result<T, E> {
         match self {
             Some(v) => Ok(v),
             None => {
@@ -143,14 +143,11 @@ pub impl<T> Option<T> {
             }
         }
     }
-    
-    fn context<E: Display>(self, err: E) -> anyhow::Result<T>
-    {
+
+    fn context<E: Display>(self, err: E) -> anyhow::Result<T> {
         match self {
             Some(v) => Ok(v),
-            None => {
-                Err(anyhow::anyhow!("{err}"))
-            }
+            None => Err(anyhow::anyhow!("{err}")),
         }
     }
 }
@@ -160,7 +157,7 @@ pub impl bool {
     fn then<U>(&self, true_then: U, or: U) -> U {
         self.then_some(true_then).unwrap_or(or)
     }
-    
+
     fn change(&mut self, new: Self) -> bool {
         let ret = *self != new;
         *self = new;

@@ -21,9 +21,9 @@ pub mod bo; // File read/write
 pub mod broc;
 pub mod bs; // Filesystem check/set/read
 
-pub mod macros;
 pub mod bait;
 pub mod bother;
+pub mod macros;
 
 #[cfg(feature = "text")]
 pub mod text;
