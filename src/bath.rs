@@ -3,14 +3,14 @@
 use std::path::{Component, Path, PathBuf};
 
 /// Get the (lossy) basename of a valid path.
-/// Exits if path terminates in ..
-/// Prints error.
+/// Returns empty if path has no filename.
+/// warns on error.
 pub fn basename(path: &Path) -> Cow<'_, str> {
     match path.file_name() {
         Some(s) => s.to_string_lossy(),
         None => {
             log::warn!("Failed to determine basename of {path:?}");
-            path.to_string_lossy()
+            "".into()
         }
     }
 }
@@ -38,12 +38,15 @@ pub fn root_dir() -> PathBuf {
 
 #[easy_ext::ext(PathExt)]
 pub impl<T: AsRef<Path>> T {
-    /// Get the owned (lossy) basename of a valid path
-    /// Exits if path terminates in ..
-    /// Prints error.
+    /// Get the owned (lossy) basename of a valid path (for display purposes).
+    /// Returns the original if path has no filename.
     fn basename(&self) -> String {
         let path = self.as_ref();
-        basename(path).to_string()
+        match path.file_name() {
+            Some(s) => s.to_string_lossy(),
+            None => path.to_string_lossy(),
+        }
+        .to_string()
     }
 
     // this overrides stdlib display method but to_string_lossy should be preferred over that anyway imo

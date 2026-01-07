@@ -44,3 +44,82 @@ impl str {
         return self.into();
     }
 }
+
+/// # Notes
+// \ is always consumed to aid with escaping custom parsing tokens.
+///
+/// # Example
+///
+/// ```rust
+///
+/// let mut out = String::with_capacity(s.len());
+/// let mut chars = s.chars();
+/// while let Some(c) = chars.next() {
+///    if c == '\\' {
+///        consume_escape(&mut chars, &mut out);
+///        continue;
+///    }
+///    out.push(c);
+/// }
+/// ```
+pub fn consume_escaped(chars: &mut impl Iterator<Item = char>, out: &mut String) {
+    match parse_next_escape(chars) {
+        Ok(e) => out.push(e),
+        Err(orig) => {
+            out.push(orig);
+        }
+    }
+}
+
+pub fn parse_next_escape<I>(chars: &mut I) -> Result<char, char>
+where
+    I: Iterator<Item = char>,
+{
+    log::debug!("Parsing escape");
+
+    let next = match chars.next() {
+        Some(c) => c,
+        None => return Err('\\'), // nothing after backslash
+    };
+
+    log::debug!("Parsing {next}");
+
+    match next {
+        'n' => Ok('\n'),
+        'r' => Ok('\r'),
+        't' => Ok('\t'),
+        '\\' => Ok('\\'),
+        '"' => Ok('"'),
+        '\'' => Ok('\''),
+        '0' => Ok('\0'),
+        'x' => {
+            let hi = chars.next();
+            let lo = chars.next();
+            if let (Some(hi), Some(lo)) = (hi, lo) {
+                if let Ok(v) = u8::from_str_radix(&format!("{hi}{lo}"), 16) {
+                    return Ok(v as char);
+                }
+            }
+            Err('x')
+        }
+        'u' => {
+            if chars.next() == Some('{') {
+                let mut hex = String::new();
+                for c in chars.by_ref() {
+                    if c == '}' {
+                        break;
+                    }
+                    hex.push(c);
+                }
+                if let Ok(v) = u32::from_str_radix(&hex, 16) {
+                    if let Some(c) = char::from_u32(v) {
+                        return Ok(c);
+                    }
+                }
+                return Err('u');
+            }
+            Err('u')
+        }
+        other => Err(other),
+    }
+}

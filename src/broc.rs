@@ -1,7 +1,8 @@
 //! Utilities for (spawning) processes
 
-use crate::{_log, bait::ResultExt, bog::BogOkExt, ebog};
+use crate::{bait::ResultExt, bog::BogOkExt, ebog};
 use cfg_if::cfg_if;
+use log::debug;
 use std::{
     env,
     ffi::{OsStr, OsString},
@@ -18,7 +19,7 @@ impl Command {
         let cmd = self;
 
         let ep = format!("Failed to spawn: {}", cmd.display());
-        _log!("Spawning detached: {cmd:?}");
+        debug!("Spawning detached: {cmd:?}");
 
         cmd.stdin(Stdio::null())
             .stdout(Stdio::null())
@@ -50,9 +51,9 @@ impl Command {
     }
 
     /// Spawn command with piped stdout
-    /// Logs the command in debug builds
+    /// Debug logs the command
     pub fn spawn_piped(&mut self) -> Result<ChildStdout, String> {
-        _log!("Spawning piped: {self:?}");
+        debug!("Spawning piped: {self:?}");
 
         match self
             .stdin(Stdio::null())
@@ -78,12 +79,14 @@ impl Command {
     }
 
     /// Use [`SHELL`] to create a command from a shell script
+    /// On unix, the empty string is given to $0 so that subsequent args are fed to the script directly.
+    /// On windows (todo)
     pub fn from_script(script: &str) -> Self {
         let (shell, arg) = &*SHELL;
 
         let mut ret = Command::new(shell);
 
-        ret.arg(arg).arg(script);
+        ret.arg(arg).arg(script).arg(""); // 
 
         ret
     }
@@ -92,7 +95,7 @@ impl Command {
     ///
     /// Logs and displays errors.
     pub fn _exec(&mut self) -> ! {
-        _log!("Exec: {self:?}");
+        debug!("Exec: {self:?}");
 
         #[cfg(not(windows))]
         {
