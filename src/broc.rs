@@ -2,7 +2,7 @@
 
 use crate::{bait::ResultExt, bog::BogOkExt, ebog};
 use cfg_if::cfg_if;
-use log::debug;
+use log::{debug, trace};
 use std::{
     env,
     ffi::{OsStr, OsString},
@@ -12,25 +12,38 @@ use std::{
 
 #[easy_ext::ext(CommandExt)]
 impl Command {
-    /// One-off spawn executable
-    /// Logs the command in debug builds
-    /// Prints error.
-    pub fn spawn_detached(&mut self) -> Option<Child> {
-        let cmd = self;
+    /// Use [`SHELL`] to create a command from a shell script
+    /// On unix, the empty string is given to $0 so that subsequent args are fed to the script directly.
+    /// On windows (todo)
+    pub fn from_script(script: &str) -> Self {
+        let (shell, arg) = &*SHELL;
 
-        let ep = format!("Failed to spawn: {}", cmd.display());
-        debug!("Spawning detached: {cmd:?}");
+        let mut ret = Command::new(shell);
 
-        cmd.stdin(Stdio::null())
-            .stdout(Stdio::null())
-            .stderr(Stdio::null());
+        ret.arg(arg).arg(script).arg(""); //
 
+        ret
+    }
+
+    /// Display the command.
+    /// Does not escape arguments.
+    pub fn display(&self) -> String {
+        std::iter::once(self.get_program())
+            .chain(self.get_args())
+            .map(|s| s.to_string_lossy())
+            .collect::<Vec<_>>()
+            .join(" ")
+    }
+
+    /// Detach the command.
+    /// Does nothing on unsupported platforms (not windows or unix).
+    pub fn detach(&mut self) -> &mut Self {
         cfg_if! {
             if #[cfg(unix)] {
                 use std::os::unix::process::CommandExt;
 
                 unsafe {
-                    cmd.pre_exec(|| {
+                    self.pre_exec(|| {
                         libc::setsid(); // continue even if setsid fails
                         Ok(())
                     });
@@ -41,13 +54,28 @@ impl Command {
                 const DETACHED_PROCESS: u32 = 0x00000008;
                 const CREATE_NEW_PROCESS_GROUP: u32 = 0x00000200;
 
-                cmd.creation_flags(DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP);
+                self.creation_flags(DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP);
             } else {
-                return None;
+                log::info!("Failed to detach: unsupported platform")
             }
         }
 
-        cmd.spawn().prefix(&ep)._ebog()
+        self
+    }
+
+    /// One-off spawn executable
+    /// Logs the command in debug builds
+    /// Prints error.
+    pub fn spawn_detached(&mut self) -> Option<Child> {
+        let ep = format!("Failed to spawn: {}", self.display());
+        debug!("Spawning detached: {self:?}");
+
+        self.stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .detach();
+
+        self.spawn().prefix(&ep)._ebog()
     }
 
     /// Spawn command with piped stdout
@@ -78,24 +106,11 @@ impl Command {
             .unwrap_or(false)
     }
 
-    /// Use [`SHELL`] to create a command from a shell script
-    /// On unix, the empty string is given to $0 so that subsequent args are fed to the script directly.
-    /// On windows (todo)
-    pub fn from_script(script: &str) -> Self {
-        let (shell, arg) = &*SHELL;
-
-        let mut ret = Command::new(shell);
-
-        ret.arg(arg).arg(script).arg(""); // 
-
-        ret
-    }
-
-    /// Platform-agnostic exec (become) the command
+    /// Platform-agnostic exec the command
     ///
     /// Logs and displays errors.
     pub fn _exec(&mut self) -> ! {
-        debug!("Exec: {self:?}");
+        debug!("Becoming: {self:?}");
 
         #[cfg(not(windows))]
         {
@@ -126,26 +141,17 @@ impl Command {
 
     /// Spawn the command, logging errors.
     pub fn _spawn(&mut self) -> Option<Child> {
+        trace!("Spawning: {self:?}");
         self.spawn()
             .prefix(&format!("Could not spawn: {}", self.display()))
             ._elog()
-    }
-
-    /// Display the command.
-    /// Does not escape arguments.
-    pub fn display(&self) -> String {
-        std::iter::once(self.get_program())
-            .chain(self.get_args())
-            .map(|s| s.to_string_lossy())
-            .collect::<Vec<_>>()
-            .join(" ")
     }
 }
 
 /// Join arguments into a single string
 /// Non-UTF-8 arguments are not escaped
 /// Todo: support windows
-pub fn format_sh_command(inputs: &[impl AsRef<OsStr>]) -> OsString {
+pub fn format_sh_command(inputs: &[impl AsRef<OsStr>], double: bool) -> OsString {
     let mut cmd = OsString::new();
     let mut first = true;
 
@@ -159,13 +165,23 @@ pub fn format_sh_command(inputs: &[impl AsRef<OsStr>]) -> OsString {
 
         match os.to_str() {
             Some(s) => {
-                // shell-escape only when valid UTF-8
-                let escaped = s.replace('\'', "'\\''");
-                cmd.push("'");
-                cmd.push(escaped);
-                cmd.push("'");
+                if double {
+                    let escaped = s
+                        .replace("\\", "\\\\")
+                        .replace('\"', "\\\"")
+                        .replace("$", "\\$");
+                    cmd.push("\"");
+                    cmd.push(escaped);
+                    cmd.push("\"");
+                } else {
+                    let escaped = s.replace('\'', "'\\''");
+                    cmd.push("'");
+                    cmd.push(escaped);
+                    cmd.push("'");
+                }
             }
             None => {
+                // no shell-escape if not valid UTF-8 since there is no safe way to do it.
                 cmd.push(os);
             }
         }
@@ -175,11 +191,14 @@ pub fn format_sh_command(inputs: &[impl AsRef<OsStr>]) -> OsString {
 }
 
 pub fn display_sh_prog_and_args(prog: impl AsRef<OsStr>, args: &[impl AsRef<OsStr>]) -> String {
-    format_sh_command(&{
-        let mut i = vec![prog.as_ref()];
-        i.extend(args.iter().map(|x| x.as_ref()));
-        i
-    })
+    format_sh_command(
+        &{
+            let mut i = vec![prog.as_ref()];
+            i.extend(args.iter().map(|x| x.as_ref()));
+            i
+        },
+        false,
+    )
     .to_string_lossy()
     .to_string()
 }

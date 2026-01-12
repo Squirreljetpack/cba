@@ -154,10 +154,17 @@ pub impl<T> Option<T> {
 
 #[easy_ext::ext(BoolExt)]
 pub impl bool {
-    fn then<U>(&self, true_then: U, or: U) -> U {
-        self.then_some(true_then).unwrap_or(or)
+    #[inline]
+    fn ternary<U>(&self, and: U, or: U) -> U {
+        self.then_some(and).unwrap_or(or)
     }
 
+    #[inline]
+    fn and_then<U>(&self, f: impl FnOnce() -> Option<U>) -> Option<U> {
+        if *self { f() } else { None }
+    }
+
+    #[inline]
     fn change(&mut self, new: Self) -> bool {
         let ret = *self != new;
         *self = new;

@@ -3,9 +3,9 @@
 use std::path::{Component, Path, PathBuf};
 
 /// Get the (lossy) basename of a valid path.
-/// Returns empty if path has no filename.
-/// warns on error.
-pub fn basename(path: &Path) -> Cow<'_, str> {
+/// Empty if path has no filename.
+/// Warns on error.
+pub fn filename(path: &Path) -> Cow<'_, str> {
     match path.file_name() {
         Some(s) => s.to_string_lossy(),
         None => {
@@ -15,7 +15,7 @@ pub fn basename(path: &Path) -> Cow<'_, str> {
     }
 }
 
-pub fn basename_strict(path: &Path) -> &str {
+pub fn _filename(path: &Path) -> &str {
     let err_prefix = format!("Failed to detezrmine basename of {path:?}");
     path.file_name()
         ._ebog(&err_prefix)
@@ -49,7 +49,6 @@ pub impl<T: AsRef<Path>> T {
         .to_string()
     }
 
-    // this overrides stdlib display method but to_string_lossy should be preferred over that anyway imo
     fn display_short(&self, home_dir: &Path) -> String {
         let path = self.as_ref();
         if let Ok(stripped) = path.strip_prefix(home_dir) {
@@ -219,7 +218,7 @@ impl Default for RenamePolicy {
 }
 
 // Requires: src is a normalized path with a filename
-// If dest ends with a slash, is dest/src_name
+// If dest ends with a slash, target becomes dest/src_name
 pub fn auto_dest_for_src(
     src: impl AsRef<Path>,
     dest: impl AsRef<OsStr>,
@@ -251,7 +250,7 @@ pub fn auto_dest_for_src(
             }
 
             let parent = initial_dest.parent().unwrap_or(&initial_dest);
-            let s = basename(&initial_dest);
+            let s = filename(&initial_dest);
             let [stem, ext] = split_ext(&s);
 
             for i in 1usize.. {
