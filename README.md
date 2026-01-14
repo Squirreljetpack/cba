@@ -19,22 +19,22 @@ Additionally, `format!`-like macros are provided: `ebog!("{my_content}"; "{optio
 #### Extension traits for unwrapping
 The extension traits and logging macros follow a general naming pattern of `{level}{bog/log}`. For example, `result.elog()` calls `log::error!` on the error.
 Each such function also has a variant whose name is prefixed with `_` which consumes the error, downgrading `Results` to `Options`, and `Option<T>` to `T` (or else exiting the program with code 1).
-`prefix_err()` can be used to add context to the error.
+`prefix()` and `context()` can be used to add context to the error.
 
 A standard pattern to handle non-fatal errors under this paradigm is like so:
 ```rust
 let x = else_default!(
 	try()
-	.prefix_err("Failed to copy") // {e} -> Failed to copy: {e}
+	.prefix("Failed to copy") // {e} -> Failed to copy: {e}
 	._wbog() // warn and consume the error
 );
 ```
 
 #### Bath/Bo/Broc/Bs
 Simple wrappers around standard library modules (`path, io, process, fs`) for more ergonomic usage.
-A few of these operations take the liberty of bogging pertinent errors instead of propogating them, downgrading them to Option or bool.
+A few of these operations take the liberty of logging (or bogging) errors instead of propogating them, downgrading them to Option or bool.
 
-#### Macros/Misc/...
+#### Macros/Traits/Other/...
 - macros for defining wrapper types
 - debug_assertion gated functions
 - more random extension traits

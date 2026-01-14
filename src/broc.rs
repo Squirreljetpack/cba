@@ -132,7 +132,7 @@ impl Command {
                         .unwrap_or(if status.success() { 0 } else { 1 }),
                 ),
                 Err(err) => {
-                    ebog!("Could not exec {}: {err}", , self.display());
+                    ebog!("Could not exec {}: {err}", self.display());
                     exit(1)
                 }
             }
