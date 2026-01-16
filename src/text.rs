@@ -75,14 +75,10 @@ pub fn parse_next_escape<I>(chars: &mut I) -> Result<char, char>
 where
     I: Iterator<Item = char>,
 {
-    log::debug!("Parsing escape");
-
     let next = match chars.next() {
         Some(c) => c,
         None => return Err('\\'), // nothing after backslash
     };
-
-    log::debug!("Parsing {next}");
 
     match next {
         'n' => Ok('\n'),

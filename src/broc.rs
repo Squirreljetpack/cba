@@ -6,6 +6,7 @@ use log::{debug, trace};
 use std::{
     env,
     ffi::{OsStr, OsString},
+    process::exit,
     process::{Child, ChildStdout, Command, Stdio},
     sync::LazyLock,
 };
@@ -117,7 +118,6 @@ impl Command {
             // replace current process
             use std::os::unix::process::CommandExt;
             let err = self.exec();
-            use std::process::exit;
 
             ebog!("Could not exec {}: {err}", self.display());
             exit(1)

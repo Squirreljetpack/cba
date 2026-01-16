@@ -58,7 +58,8 @@ pub fn set_executable(path: &Path) -> Result<(), std::io::Error> {
     #[cfg(windows)]
     {
         // determined by ext
-        todo!()
+        // todo: improve
+        Ok(())
     }
     #[cfg(unix)]
     {
@@ -71,7 +72,7 @@ pub fn set_executable(path: &Path) -> Result<(), std::io::Error> {
     }
     #[cfg(not(any(unix, windows)))]
     {
-        todo!()
+        Ok(())
     }
 }
 
