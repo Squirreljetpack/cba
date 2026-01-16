@@ -23,11 +23,9 @@ Each such function also has a variant whose name is prefixed with `_` which cons
 
 A standard pattern to handle non-fatal errors under this paradigm is like so:
 ```rust
-let x = else_default!(
-	try()
+let x = try()
 	.prefix("Failed to copy") // {e} -> Failed to copy: {e}
-	._wbog() // warn and consume the error
-);
+	._wbog() // pretty print the warning and consume the error
 ```
 
 #### Bath/Bo/Broc/Bs
