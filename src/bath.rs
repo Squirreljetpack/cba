@@ -137,24 +137,45 @@ pub impl<T: AsRef<Path>> T {
 
         ret
     }
-}
 
+    /// Quotes the path.
+    /// Returns None if not Windows or Unix or not UTF-8.
+    fn to_shell_string(&self) -> Option<String> {
+        let Some(s) = self.as_ref().to_str() else {
+            return None;
+        };
+
+        if cfg!(windows) {
+            // Windows CMD: wrap in double quotes, escape internal quotes by doubling them
+            // e.g., C:\Path "With" Quotes -> "C:\Path ""With"" Quotes"
+            let escaped = s.replace('"', "\"\"");
+            Some(format!("\"{}\"", escaped))
+        } else if cfg!(unix) {
+            // Unix shells: wrap in single quotes, escape internal single quotes
+            // e.g., /path/it's/here -> '/path/it'\''s/here'
+            let escaped = s.replace('\'', r"'\''");
+            Some(format!("'{}'", escaped))
+        } else {
+            None
+        }
+    }
+}
 // ----------------------
 
 /// Cache the expression into a fn() -> &'static Path
 #[macro_export]
 macro_rules! expr_as_path_fn {
-    ($fn_name:ident, $expr:expr) => {
-        paste::paste! {
-            pub fn [<$fn_name>]() -> &'static std::path::Path {
-                static VALUE: std::sync::LazyLock<std::path::PathBuf> = std::sync::LazyLock::new(|| {
-                    $expr.into()
-                });
-                &VALUE
+        ($fn_name:ident, $expr:expr) => {
+            paste::paste! {
+                pub fn [<$fn_name>]() -> &'static std::path::Path {
+                    static VALUE: std::sync::LazyLock<std::path::PathBuf> = std::sync::LazyLock::new(|| {
+                        $expr.into()
+                    });
+                    &VALUE
+                }
             }
-        }
-    };
-}
+        };
+    }
 
 // ----------------------
 

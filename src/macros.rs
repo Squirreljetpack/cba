@@ -4,10 +4,8 @@
 ///
 /// Implements Deref, DerefMut, FromStr, Display, PartialEq, Clone, Debug, Serialize, Deserialize.
 macro_rules! impl_transparent_wrapper {
-        ($name:ident, $inner:ty, $default:expr $(; $($attr:meta),* $(,)?)?) => {
-                $(
-                        $(#[$attr])*
-                )?
+        ($(#[$meta:meta])* $name:ident, $inner:ty, $default:expr) => {
+                $(#[$meta])*
                 #[derive(Debug, Clone, Eq, serde::Serialize, serde::Deserialize)]
                 #[serde(transparent)]
                 pub struct $name(pub $inner);
@@ -66,10 +64,8 @@ macro_rules! impl_transparent_wrapper {
 ///
 /// Implements Deref, PartialEq, Clone, Debug, Serialize.
 macro_rules! impl_restricted_wrapper {
-        ($name:ident, $inner:ty, $default:expr $(; $($attr:meta),* $(,)?)?) => {
-                $(
-                        $(#[$attr])*
-                )?
+        ($(#[$meta:meta])* $name:ident, $inner:ty, $default:expr) => {
+                $(#[$meta])*
                 #[derive(Debug, Clone, Eq, serde::Serialize)]
                 #[serde(transparent)]
                 pub struct $name($inner);
