@@ -358,7 +358,6 @@ pub fn init_filter(verbosity: u8) {
         1 => BOGGER::filter_below(BogLevel::WARN),
         2 => BOGGER::filter_below(BogLevel::INFO),
         3 => BOGGER::filter_below(BogLevel::DEBUG),
-        4 => BOGGER::filter_below(BogLevel::EMPTY),
         _ => BOGGER::filter_below(BogLevel::ALL),
     }
 }
@@ -506,7 +505,7 @@ macro_rules! cbog {
 ///     println!("Processing {}", x);
 /// }
 ///
-/// if let Some(x) = fallible_result().or_err() {
+/// if let Some(x) = fallible_result()._ebog() {
 ///     process(x);
 /// }
 /// ```

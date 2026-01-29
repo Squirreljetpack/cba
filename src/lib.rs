@@ -21,6 +21,7 @@ pub mod bo; // File read/write
 pub mod broc;
 pub mod bs; // Filesystem check/set/read
 
+pub mod bum;
 pub mod bait;
 pub mod bother;
 pub mod macros;

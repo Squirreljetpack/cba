@@ -45,7 +45,30 @@ impl Command {
 
                 unsafe {
                     self.pre_exec(|| {
-                        libc::setsid(); // continue even if setsid fails
+                        // POSIX.1-2017 describes `fork` as async-signal-safe with the following note:
+                        //
+                        // > While the fork() function is async-signal-safe, there is no way for
+                        // > an implementation to determine whether the fork handlers established by
+                        // > pthread_atfork() are async-signal-safe. [...] It is therefore undefined for the
+                        // > fork handlers to execute functions that are not async-signal-safe when fork()
+                        // > is called from a signal handler.
+                        //
+                        // POSIX.1-2024 removes this guarantee and introduces an async-signal-safe
+                        // replacement `_Fork`, which we'd like to use, but macOS doesn't support it yet.
+                        //
+                        // Since we aren't registering any fork handlers, and hopefully the OS doesn't
+                        // either, we're fine on systems compatible with POSIX.1-2017, which should be
+                        // enough for a long while. If this ever becomes a problem in the future, we should
+                        // be able to switch to `_Fork`.
+                        match libc::fork() {
+                            -1 => (),
+                            0 => (),
+                            _ => libc::_exit(0),
+                        }
+
+                        if libc::setsid() == -1 {
+                            // continue even if setsid fails
+                        }
                         Ok(())
                     });
                 }
@@ -55,7 +78,10 @@ impl Command {
                 const DETACHED_PROCESS: u32 = 0x00000008;
                 const CREATE_NEW_PROCESS_GROUP: u32 = 0x00000200;
 
-                self.creation_flags(DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP);
+                self.creation_flags(
+                    DETACHED_PROCESS // detaches console like CREATE_NO_WINDOW, but also eliminates io
+                    | CREATE_NEW_PROCESS_GROUP
+                );
             } else {
                 log::info!("Failed to detach: unsupported platform")
             }

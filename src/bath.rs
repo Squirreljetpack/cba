@@ -90,10 +90,10 @@ pub impl<T: AsRef<Path>> T {
     /// # Example
     /// ```rust
     /// use std::path::Path;
-    /// use cli_boilerplate_automation::{bog::{BogOkExt, BogUnwrapExt},bath::PathExt};
+    /// use cli_boilerplate_automation::{bog::{BogOkExt, BogUnwrapExt}, bath::PathExt, bait::OptionExt};
     ///
     /// let path = Path::new("");
-    /// path.abs(std::env::current_dir().or_err().or_exit());
+    /// path.abs(std::env::current_dir()._ebog().or_exit());
     /// ```
     fn abs(&self, base: impl AsRef<Path>) -> PathBuf {
         let path = self.as_ref();
@@ -165,17 +165,14 @@ pub impl<T: AsRef<Path>> T {
 /// Cache the expression into a fn() -> &'static Path
 #[macro_export]
 macro_rules! expr_as_path_fn {
-        ($fn_name:ident, $expr:expr) => {
-            paste::paste! {
-                pub fn [<$fn_name>]() -> &'static std::path::Path {
-                    static VALUE: std::sync::LazyLock<std::path::PathBuf> = std::sync::LazyLock::new(|| {
-                        $expr.into()
-                    });
-                    &VALUE
-                }
-            }
-        };
-    }
+    ($fn_name:ident, $expr:expr) => {
+        pub fn $fn_name() -> &'static std::path::Path {
+            static VALUE: std::sync::LazyLock<std::path::PathBuf> =
+                std::sync::LazyLock::new(|| $expr.into());
+            &VALUE
+        }
+    };
+}
 
 // ----------------------
 

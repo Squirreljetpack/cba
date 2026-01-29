@@ -2,21 +2,17 @@
 
 use std::{error::Error, fs, io, path::Path};
 
-use crate::{
-    bait::ResultExt,
-    bog::{BOGGER, BogContext, BogLevel, BogOkExt},
-    ebog, else_default,
-};
+use crate::{bait::ResultExt, bog::BogOkExt, ebog, else_default};
 
 // ------------ File read/write (bile) -------------
 
 /// Saves type to file.
 ///
 /// Prints error.
-pub fn dump_type<T, E: Error>(
+pub fn dump_type<'a, T, E: Error>(
     path: impl AsRef<Path>,
-    input: &T,
-    string_maker: impl FnOnce(&T) -> Result<String, E>,
+    input: &'a T,
+    string_maker: impl FnOnce(&'a T) -> Result<String, E>,
 ) -> bool {
     let path = path.as_ref().with_extension("toml");
     let type_name = std::any::type_name::<T>().rsplit("::").next().unwrap();
@@ -32,49 +28,60 @@ pub fn dump_type<T, E: Error>(
     }
 }
 
-/// Returns none if file could not be found/read/parsed.
-///
-/// Prints error.
-pub fn load_type<T, E: Error>(
+/// Returns error string if file could not be found/read/parsed.
+pub fn load_type<T, E: std::fmt::Display>(
     path: impl AsRef<Path>,
     str_loader: impl FnOnce(&str) -> Result<T, E>, // pass a closure here if u need to satisfy hrtb
-) -> Option<T> {
+) -> anyhow::Result<T> {
     let path = path.as_ref().with_extension("toml");
     let type_name = std::any::type_name::<T>().rsplit("::").next().unwrap();
     let error_prefix = format!("Failed to load {type_name} from {}", path.to_string_lossy());
 
-    let mut file = else_default!(fs::File::open(path).prefix(&error_prefix)._ebog());
+    let mut file = fs::File::open(path).context(&error_prefix)?;
 
     let mut contents = String::new();
-    else_default!(
-        io::Read::read_to_string(&mut file, &mut contents)
-            .prefix(&error_prefix)
-            ._ebog()
-    );
+    io::Read::read_to_string(&mut file, &mut contents).context(&error_prefix)?;
 
-    Some(else_default!(
-        str_loader(&contents).prefix(&error_prefix)._ebog()
-    ))
+    str_loader(&contents).context(&error_prefix)
 }
 
 /// If the path exists, load from it, otherwise load from the provided default.
 ///
 /// Prints error.
-pub fn load_type_or_default<T: Default, E: Error>(
+///
+/// # Example
+/// ```rust, ignore
+/// #[derive(Debug, serde::Deserialize)]
+/// pub struct LessfilterConfig {
+///     #[serde(flatten, default)]
+///     pub test: TestSettings,
+///     #[serde(default)]
+///     pub rules: RulesConfig,
+///     #[serde(default)]
+///     pub actions: CustomActions,
+/// }
+///
+/// impl Default for LessfilterConfig {
+///     fn default() -> Self {
+///         let ret = toml::from_str(include_str!("../../assets/config/lessfilter.toml"));
+///         ret.unwrap()
+///     }
+/// }
+///
+/// let cfg: LessfilterConfig = load_type_or_default(lessfilter_cfg_path(), |s| toml::from_str(s));
+/// ```
+pub fn load_type_or_default<T: Default, E: std::fmt::Display>(
     path: impl AsRef<Path>,
-    str_loader: impl FnOnce(&str) -> Result<T, E>,
-    default_str: &str,
+    str_loader: impl Fn(&str) -> Result<T, E>,
 ) -> T {
     let path = path.as_ref();
     if path.is_file() {
-        BOGGER::with(
-            BogContext::new()
-                .upper(BogLevel::WARN)
-                .prefix("Using default config: "),
-            || load_type(path, str_loader).unwrap_or_default(),
-        )
+        load_type(path, &str_loader)
+            .prefix("Using default config due to errors")
+            ._wbog()
+            .unwrap_or_else(T::default)
     } else {
-        str_loader(default_str).unwrap()
+        T::default()
     }
 }
 
@@ -115,14 +122,15 @@ pub fn read_to_chunks<R: Read>(reader: R, delim: char) -> std::io::Split<std::io
 pub fn map_chunks<const INVALID_FAIL: bool, E>(
     iter: impl Iterator<Item = std::io::Result<Vec<u8>>>,
     mut f: impl FnMut(String) -> Result<(), E>,
-) -> Result<(), MapReaderError<E>> {
+) -> Result<usize, MapReaderError<E>> {
+    let mut count = 0;
     for (i, chunk_result) in iter.enumerate() {
         if i == u32::MAX as usize {
             warn!("Reached maximum segment limit, stopping input read");
             return Err(MapReaderError::ChunkError(i));
         }
 
-        let chunk = match chunk_result {
+        let bytes = match chunk_result {
             Ok(bytes) => bytes,
             Err(e) => {
                 error!("Error reading chunk: {e}");
@@ -130,10 +138,12 @@ pub fn map_chunks<const INVALID_FAIL: bool, E>(
             }
         };
 
-        match String::from_utf8(chunk) {
+        match String::from_utf8(bytes) {
             Ok(s) => {
                 if let Err(e) = f(s) {
                     return Err(MapReaderError::Custom(e));
+                } else {
+                    count += 1;
                 }
             }
             Err(e) => {
@@ -151,15 +161,16 @@ pub fn map_chunks<const INVALID_FAIL: bool, E>(
             }
         }
     }
-    Ok(())
+    Ok(count)
 }
 
 /// Map each line read from reader to a string, passing to f.
 pub fn map_reader_lines<const INVALID_FAIL: bool, E>(
     reader: impl Read,
     mut f: impl FnMut(String) -> Result<(), E>,
-) -> Result<(), MapReaderError<E>> {
+) -> Result<usize, MapReaderError<E>> {
     let buf_reader = io::BufReader::new(reader);
+    let mut count = 0;
 
     for (i, line) in buf_reader.lines().enumerate() {
         if i == u32::MAX as usize {
@@ -170,6 +181,8 @@ pub fn map_reader_lines<const INVALID_FAIL: bool, E>(
             Ok(l) => {
                 if let Err(e) = f(l) {
                     return Err(MapReaderError::Custom(e));
+                } else {
+                    count += 1;
                 }
             }
             Err(e) => {
@@ -182,5 +195,5 @@ pub fn map_reader_lines<const INVALID_FAIL: bool, E>(
             }
         }
     }
-    Ok(())
+    Ok(count)
 }

@@ -127,11 +127,12 @@ pub impl<T> Option<T> {
         }
     }
 
+    /// Unwrap or log and exit
     fn _elog(self, s: &str) -> T {
         if self.is_none() {
             log::error!("{s}");
         }
-        self.unwrap()
+        self.or_exit()
     }
 
     fn elog<E: Display>(self, err: E) -> Result<T, E> {
@@ -169,5 +170,12 @@ pub impl bool {
         let ret = *self != new;
         *self = new;
         ret
+    }
+
+    #[inline]
+    fn or_exit(&self) {
+        if !self {
+            std::process::exit(1)
+        }
     }
 }

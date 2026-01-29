@@ -48,7 +48,7 @@ pub fn is_executable(path: impl AsRef<Path>) -> bool {
 ///     let error_prefix = format!("Failed set executability of {path:?}");
 ///     if symlink(src, dst)
 ///         .prefix_err(&error_prefix)
-///         .or_err()
+///         ._ebog()
 ///         .is_some() {
 ///     // success
 ///     }
@@ -130,7 +130,7 @@ pub fn is_symlink(path: impl AsRef<Path>) -> bool {
 ///     let error_prefix = format!("Failed to symlink {src:?} to {dst:?}");
 ///     if symlink(src, dst)
 ///         .prefix_err(&error_prefix)
-///         .or_err()
+///         ._ebog()
 ///         .is_some() {
 ///     // success
 ///     }
@@ -203,7 +203,7 @@ pub fn create_dir(dir: impl AsRef<Path>) -> bool {
 /// clear_dir(&path, |entry| {
 ///    // filter condition
 ///   true
-/// }).prefix_err(&err_prefix).or_err();
+/// }).prefix_err(&err_prefix)._ebog();
 /// ```
 pub fn clear_dir(
     dir: impl AsRef<Path>,
