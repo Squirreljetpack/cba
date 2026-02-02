@@ -1,6 +1,6 @@
 //! Utilities for (spawning) processes
 
-use crate::{bait::ResultExt, bog::BogOkExt, ebog};
+use crate::{StringError, bait::ResultExt, bog::BogOkExt, ebog};
 use cfg_if::cfg_if;
 use log::{debug, trace};
 use std::{
@@ -21,7 +21,7 @@ impl Command {
 
         let mut ret = Command::new(shell);
 
-        ret.arg(arg).arg(script).arg(""); //
+        ret.arg(arg).arg(script).arg(""); // the first argument is the program name which we leave empty
 
         ret
     }
@@ -90,8 +90,8 @@ impl Command {
         self
     }
 
-    /// One-off spawn executable
-    /// Logs the command in debug builds
+    /// One-off spawn executable.
+    /// Logs the command in debug builds.
     /// Prints error.
     pub fn spawn_detached(&mut self) -> Option<Child> {
         let ep = format!("Failed to spawn: {}", self.display());
@@ -105,9 +105,9 @@ impl Command {
         self.spawn().prefix(&ep)._ebog()
     }
 
-    /// Spawn command with piped stdout
-    /// Debug logs the command
-    pub fn spawn_piped(&mut self) -> Result<ChildStdout, String> {
+    /// Spawn command with piped stdout.
+    /// Debug logs the command.
+    pub fn spawn_piped(&mut self) -> Result<ChildStdout, StringError> {
         debug!("Spawning piped: {self:?}");
 
         match self
@@ -120,11 +120,11 @@ impl Command {
             .take()
         {
             Some(s) => Ok(s),
-            None => Err(format!("No stdout for {}.", self.display())), // stdout failure has no reason suffix
+            None => Err(format!("No stdout for {}.", self.display()).into()), // stdout failure has no reason suffix
         }
     }
 
-    /// Naive check of whether a command succeeds. (i.e. health check)
+    /// Naive check of whether a command succeeds. (i.e. health check).
     pub fn success(&mut self) -> bool {
         self.stdout(Stdio::null())
             .stderr(Stdio::null())
@@ -133,7 +133,7 @@ impl Command {
             .unwrap_or(false)
     }
 
-    /// Platform-agnostic exec the command
+    /// Platform-agnostic exec the command.
     ///
     /// Logs and displays errors.
     pub fn _exec(&mut self) -> ! {

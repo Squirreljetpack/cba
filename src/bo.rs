@@ -2,7 +2,7 @@
 
 use std::{error::Error, fs, io, path::Path};
 
-use crate::{bait::ResultExt, bog::BogOkExt, ebog, else_default};
+use crate::{StringError, bait::ResultExt, bog::BogOkExt};
 
 // ------------ File read/write (bile) -------------
 
@@ -13,36 +13,30 @@ pub fn dump_type<'a, T, E: Error>(
     path: impl AsRef<Path>,
     input: &'a T,
     string_maker: impl FnOnce(&'a T) -> Result<String, E>,
-) -> bool {
+) -> Result<(), StringError> {
     let path = path.as_ref().with_extension("toml");
     let type_name = std::any::type_name::<T>().rsplit("::").next().unwrap();
     let error_prefix = format!("Failed to save {type_name} to {}", path.to_string_lossy());
 
-    let content = else_default!(string_maker(input).prefix(&error_prefix)._ebog());
-    match fs::write(path, content) {
-        Ok(_) => true,
-        Err(e) => {
-            ebog!("{error_prefix}: {e}");
-            false
-        }
-    }
+    let content = string_maker(input).prefix(&error_prefix)?;
+    fs::write(path, content).prefix(&error_prefix)
 }
 
 /// Returns error string if file could not be found/read/parsed.
 pub fn load_type<T, E: std::fmt::Display>(
     path: impl AsRef<Path>,
     str_loader: impl FnOnce(&str) -> Result<T, E>, // pass a closure here if u need to satisfy hrtb
-) -> anyhow::Result<T> {
+) -> Result<T, StringError> {
     let path = path.as_ref().with_extension("toml");
     let type_name = std::any::type_name::<T>().rsplit("::").next().unwrap();
     let error_prefix = format!("Failed to load {type_name} from {}", path.to_string_lossy());
 
-    let mut file = fs::File::open(path).context(&error_prefix)?;
+    let mut file = fs::File::open(path).prefix(&error_prefix)?;
 
     let mut contents = String::new();
-    io::Read::read_to_string(&mut file, &mut contents).context(&error_prefix)?;
+    io::Read::read_to_string(&mut file, &mut contents).prefix(&error_prefix)?;
 
-    str_loader(&contents).context(&error_prefix)
+    str_loader(&contents).prefix(&error_prefix)
 }
 
 /// If the path exists, load from it, otherwise load from the provided default.
@@ -97,16 +91,15 @@ pub fn write_str(path: &Path, contents: &str) -> io::Result<()> {
 
 // --------- READER ------------
 // todo: decide on how to handle max chunks
-use log::{error, warn};
 use std::io::{BufRead, Read};
 
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
 pub enum MapReaderError<E> {
-    #[error("Failed to read chunk: {0}")]
-    ChunkError(usize),
+    #[error("Failed to read chunk {0}: {1}")]
+    ChunkError(usize, std::io::Error),
     #[error("Aborted: {0}")]
-    Custom(E),
+    Custom(#[from] E),
 }
 
 /// Adapt a reader, splitting on the delim character.
@@ -114,29 +107,44 @@ pub fn read_to_chunks<R: Read>(reader: R, delim: char) -> std::io::Split<std::io
     io::BufReader::new(reader).split(delim as u8)
 }
 
-// do not use for newlines as it doesn't handle \r!
-// todo: warn about this in config
 // note: stream means wrapping with closure passed stream::unfold and returning f() inside
 
 /// Map each chunk read from reader to a string, passing to f.
+/// Logs chunk reading errors.
+/// Use [`map_reader_lines`] instead for reading newlines.
+///
+///
+/// # Example
+/// ```rust,ignore
+/// pub fn map_reader<E: SSS + std::fmt::Display>(
+///     reader: impl Read + SSS,
+///     f: impl FnMut(String) -> Result<(), E> + SSS,
+///     input_separator: Option<char>,
+///     abort_empty: Option<RenderSender<NullActionExt>>,
+/// ) -> tokio::task::JoinHandle<Result<usize, MapReaderError<E>>> {
+///     tokio::task::spawn_blocking(move || {
+///         let ret = if let Some(delim) = input_separator {
+///             map_chunks::<true, E>(read_to_chunks(reader, delim), f).elog()
+///         } else {
+///             map_reader_lines::<true, E>(reader, f).elog()
+///         };
+///
+///         if let Some(render_tx) = abort_empty
+///             && matches!(ret, Ok(0))
+///         {
+///             let _ = render_tx.send(matchmaker::message::RenderCommand::QuitEmpty);
+///         }
+///         ret
+///     })
+/// }
+/// ```
 pub fn map_chunks<const INVALID_FAIL: bool, E>(
     iter: impl Iterator<Item = std::io::Result<Vec<u8>>>,
     mut f: impl FnMut(String) -> Result<(), E>,
 ) -> Result<usize, MapReaderError<E>> {
     let mut count = 0;
     for (i, chunk_result) in iter.enumerate() {
-        if i == u32::MAX as usize {
-            warn!("Reached maximum segment limit, stopping input read");
-            return Err(MapReaderError::ChunkError(i));
-        }
-
-        let bytes = match chunk_result {
-            Ok(bytes) => bytes,
-            Err(e) => {
-                error!("Error reading chunk: {e}");
-                return Err(MapReaderError::ChunkError(i));
-            }
-        };
+        let bytes = chunk_result.map_err(|e| MapReaderError::ChunkError(i, e))?;
 
         match String::from_utf8(bytes) {
             Ok(s) => {
@@ -147,14 +155,14 @@ pub fn map_chunks<const INVALID_FAIL: bool, E>(
                 }
             }
             Err(e) => {
-                error!(
+                let err = format!(
                     "Invalid UTF-8 in stdin at byte {}: {}",
                     e.utf8_error().valid_up_to(),
                     e
                 );
                 // Skip but continue reading
                 if INVALID_FAIL {
-                    return Err(MapReaderError::ChunkError(i));
+                    return Err(MapReaderError::ChunkError(i, std::io::Error::other(err)));
                 } else {
                     continue;
                 }
@@ -165,6 +173,7 @@ pub fn map_chunks<const INVALID_FAIL: bool, E>(
 }
 
 /// Map each line read from reader to a string, passing to f.
+/// Logs read errors.
 pub fn map_reader_lines<const INVALID_FAIL: bool, E>(
     reader: impl Read,
     mut f: impl FnMut(String) -> Result<(), E>,
@@ -173,10 +182,6 @@ pub fn map_reader_lines<const INVALID_FAIL: bool, E>(
     let mut count = 0;
 
     for (i, line) in buf_reader.lines().enumerate() {
-        if i == u32::MAX as usize {
-            eprintln!("Reached maximum line limit, stopping input read");
-            return Err(MapReaderError::ChunkError(i));
-        }
         match line {
             Ok(l) => {
                 if let Err(e) = f(l) {
@@ -186,9 +191,8 @@ pub fn map_reader_lines<const INVALID_FAIL: bool, E>(
                 }
             }
             Err(e) => {
-                eprintln!("Error reading line: {}", e);
                 if INVALID_FAIL {
-                    return Err(MapReaderError::ChunkError(i));
+                    return Err(MapReaderError::ChunkError(i, e));
                 } else {
                     continue;
                 }

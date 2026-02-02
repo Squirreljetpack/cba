@@ -140,7 +140,7 @@ pub impl<T: AsRef<Path>> T {
 
     /// Quotes the path.
     /// Returns None if not Windows or Unix or not UTF-8.
-    fn to_shell_string(&self) -> Option<String> {
+    fn shell_quote(&self) -> Option<String> {
         let Some(s) = self.as_ref().to_str() else {
             return None;
         };

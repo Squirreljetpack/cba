@@ -144,15 +144,7 @@ where
         Ok(())
     }
 }
-// match sep {
-//     Ok(s) => {
-//         writeln!(w, "{s}")?;
-//     }
-//     Err(c) => {
-//         let s = c.to_string().repeat(widths.iter().sum());
-//         writeln!(w, "{s}")?;
-//     }
-// }
+
 #[cfg(test)]
 mod tests {
     use std::io::Cursor;

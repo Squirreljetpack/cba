@@ -173,7 +173,7 @@ pub fn symlink(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> Result<(), std::
 pub fn create_dir(dir: impl AsRef<Path>) -> bool {
     let dir = dir.as_ref();
     if dir.as_os_str().is_empty() {
-        ebog!("Failed to determine directory"); // i.e. state_dir().unwrap_or_default()
+        ebog!("Failed to determine directory to create."); // i.e. state_dir().unwrap_or_default()
         return false;
     }
 

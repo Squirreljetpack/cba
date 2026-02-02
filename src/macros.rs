@@ -30,10 +30,11 @@ macro_rules! impl_transparent_wrapper {
 
                 // string
                 impl std::str::FromStr for $name {
-                        type Err = std::num::ParseIntError;
+                        type Err = $crate::StringError;
 
                         fn from_str(s: &str) -> Result<Self, Self::Err> {
-                                Ok($name(s.parse()?))
+                                let inner = s.parse::<$inner>().map_err(|e| e.to_string())?;
+                                Ok($name(inner))
                         }
                 }
                 impl std::fmt::Display for $name {
@@ -185,4 +186,3 @@ macro_rules! cats {
         s
     }};
 }
-

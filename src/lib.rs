@@ -21,9 +21,9 @@ pub mod bo; // File read/write
 pub mod broc;
 pub mod bs; // Filesystem check/set/read
 
-pub mod bum;
 pub mod bait;
 pub mod bother;
+pub mod bum;
 pub mod macros;
 
 #[cfg(feature = "text")]
@@ -31,3 +31,22 @@ pub mod text;
 
 pub mod bog;
 pub use bog::BOGGER;
+
+use std::fmt;
+#[derive(Debug)]
+pub struct StringError(pub String);
+
+impl fmt::Display for StringError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
+impl std::error::Error for StringError {}
+
+// cannot use T: Display bound unless specialization ig
+impl<T: Into<String>> From<T> for StringError {
+    fn from(s: T) -> Self {
+        StringError(s.into())
+    }
+}

@@ -1,5 +1,7 @@
 use std::fmt::Display;
 
+use crate::StringError;
+
 #[easy_ext::ext(MaybeExt)]
 pub impl<T> T
 where
@@ -42,13 +44,13 @@ pub impl<T, E> Result<T, E> {
     }
     // debated between prefix and prefix_err, chose the first because anyhow just calls it context
     /// Convert Err(e) to the string '{prefix}: {e}'
-    fn prefix(self, prefix: impl Display) -> Result<T, String>
+    fn prefix(self, prefix: impl Display) -> Result<T, StringError>
     where
         E: std::fmt::Display,
     {
         match self {
             Ok(val) => Ok(val),
-            Err(e) => Err(format!("{prefix}: {e}")),
+            Err(e) => Err(format!("{prefix}: {e}").into()),
         }
     }
 
