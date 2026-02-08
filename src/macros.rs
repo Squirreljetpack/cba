@@ -1,12 +1,24 @@
 #[macro_export]
 /// Implement a transparent wrapper around an inner type:
-///  (name, type, default (; meta)).
 ///
 /// Implements Deref, DerefMut, FromStr, Display, PartialEq, Clone, Debug, Serialize, Deserialize.
+///
+/// # Example
+/// ```rust
+/// use cli_boilerplate_automation::impl_transparent_wrapper;
+///
+/// #[cfg(feature = "serde")]
+/// impl_transparent_wrapper!(
+///     #[derive(Copy)]
+///     Count,
+///     u16,
+///     1
+/// );
+/// ```
 macro_rules! impl_transparent_wrapper {
         ($(#[$meta:meta])* $name:ident, $inner:ty, $default:expr) => {
                 $(#[$meta])*
-                #[derive(Debug, Clone, Eq, serde::Serialize, serde::Deserialize)]
+                #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
                 #[serde(transparent)]
                 pub struct $name(pub $inner);
 
@@ -43,12 +55,6 @@ macro_rules! impl_transparent_wrapper {
                         }
                 }
 
-                // standard
-                impl PartialEq for $name {
-                        fn eq(&self, other: &Self) -> bool {
-                                self.0 == other.0
-                        }
-                }
                 impl std::ops::Deref for $name {
                         type Target = $inner;
                         fn deref(&self) -> &Self::Target { &self.0 }
@@ -61,13 +67,26 @@ macro_rules! impl_transparent_wrapper {
 
 #[macro_export]
 /// Implement a restricted wrapper around an inner type:
-///  (name, type, default (; meta)).
 ///
 /// Implements Deref, PartialEq, Clone, Debug, Serialize.
+///
+/// # Example
+/// ```rust
+/// use cli_boilerplate_automation::impl_restricted_wrapper;
+///
+/// #[cfg(feature = "serde")] {
+/// impl_restricted_wrapper!(Percentage, u16, 100);
+/// impl Percentage {
+///     pub fn new(value: u16) -> Self {
+///         if value <= 100 { Self(value) } else { Self(100) }
+///     }
+/// }
+///
+/// ```
 macro_rules! impl_restricted_wrapper {
         ($(#[$meta:meta])* $name:ident, $inner:ty, $default:expr) => {
                 $(#[$meta])*
-                #[derive(Debug, Clone, Eq, serde::Serialize)]
+                #[derive(Debug, PartialEq, Eq, Clone, serde::Serialize)]
                 #[serde(transparent)]
                 pub struct $name($inner);
 
@@ -89,17 +108,89 @@ macro_rules! impl_restricted_wrapper {
                         }
                 }
 
-                // standard
-                impl PartialEq for $name {
-                        fn eq(&self, other: &Self) -> bool {
-                                self.0 == other.0
-                        }
-                }
                 impl std::ops::Deref for $name {
                         type Target = $inner;
                         fn deref(&self) -> &Self::Target { &self.0 }
                 }
         };
+}
+
+#[macro_export]
+/// Implement a wrapper around a container type (i.e. HashMap).
+/// Implements the Deref, DerefMut, Default and IntoIterator traits, and functions new and prepend.
+///
+/// ```rust
+/// use cli_boilerplate_automation::impl_collection_wrapper;
+/// pub struct Module {};
+/// impl_collection_wrapper!(
+///     #[cfg_attr(feature = "serde", derive(Debug, serde::Serialize, serde::Deserialize))]
+///     Modules,
+///     std::collections::HashMap<String, Module>
+/// );
+/// ```
+macro_rules! impl_collection_wrapper {
+    ($(#[$meta:meta])* $name:ident, $inner:ty) => {
+        $(#[$meta])*
+        pub struct $name($inner);
+
+        impl $name {
+            pub fn new() -> Self {
+                Self(<$inner>::new())
+            }
+
+            pub fn prepend(&mut self, initial: &mut Self) {
+                initial.0.extend(self.0.drain());
+                std::mem::swap(initial, self);
+            }
+        }
+
+        impl std::ops::Deref for $name {
+            type Target = $inner;
+
+            fn deref(&self) -> &Self::Target {
+                &self.0
+            }
+        }
+
+        impl std::ops::DerefMut for $name {
+            fn deref_mut(&mut self) -> &mut Self::Target {
+                &mut self.0
+            }
+        }
+
+        impl Default for $name {
+            fn default() -> Self {
+                Self(<$inner>::new())
+            }
+        }
+
+        impl IntoIterator for $name {
+            type Item = <$inner as IntoIterator>::Item;
+            type IntoIter = <$inner as IntoIterator>::IntoIter;
+
+            fn into_iter(self) -> Self::IntoIter {
+                self.0.into_iter()
+            }
+        }
+
+        impl<'a> IntoIterator for &'a $name {
+            type Item = <&'a $inner as IntoIterator>::Item;
+            type IntoIter = <&'a $inner as IntoIterator>::IntoIter;
+
+            fn into_iter(self) -> Self::IntoIter {
+                (&self.0).into_iter()
+            }
+        }
+
+        impl<'a> IntoIterator for &'a mut $name {
+            type Item = <&'a mut $inner as IntoIterator>::Item;
+            type IntoIter = <&'a mut $inner as IntoIterator>::IntoIter;
+
+            fn into_iter(self) -> Self::IntoIter {
+                (&mut self.0).into_iter()
+            }
+        }
+    };
 }
 
 // ------------- DEBUG -------------

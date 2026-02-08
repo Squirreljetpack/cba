@@ -1,7 +1,7 @@
 //! Filesystem set, check, read
 use crate::bait::ResultExt as _;
 use crate::bog::BogOkExt;
-use crate::{ebog, else_default, ibog};
+use crate::{ebog, ibog, unwrap};
 use std::cmp::Ordering;
 use std::io;
 use std::path::PathBuf;
@@ -20,7 +20,7 @@ pub fn is_executable(path: impl AsRef<Path>) -> bool {
 
     #[cfg(unix)]
     {
-        let metadata = else_default!(std::fs::metadata(path).prefix(&error_prefix)._ebog());
+        let metadata = unwrap!(std::fs::metadata(path).prefix(&error_prefix)._ebog());
         use std::os::unix::fs::PermissionsExt;
         metadata.permissions().mode() & 0o111 != 0
     }
@@ -120,7 +120,7 @@ pub fn is_symlink(path: impl AsRef<Path>) -> bool {
     let path = path.as_ref();
     let error_prefix = format!("Failed to check metadata of {path:?}");
 
-    let meta = else_default!(fs::symlink_metadata(path).prefix(&error_prefix)._ebog());
+    let meta = unwrap!(fs::symlink_metadata(path).prefix(&error_prefix)._ebog());
     meta.file_type().is_symlink()
 }
 

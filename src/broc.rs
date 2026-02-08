@@ -6,10 +6,20 @@ use log::{debug, trace};
 use std::{
     env,
     ffi::{OsStr, OsString},
-    process::exit,
-    process::{Child, ChildStdout, Command, Stdio},
+    process::{Child, ChildStdout, Command, Stdio, exit},
     sync::LazyLock,
 };
+
+#[easy_ext::ext(ChildExit)]
+impl Child {
+    pub fn wait_for_code(&mut self) -> i32 {
+        if let Some(status) = self.wait()._elog() {
+            status.code().unwrap_or(1)
+        } else {
+            1
+        }
+    }
+}
 
 #[easy_ext::ext(CommandExt)]
 impl Command {
@@ -24,6 +34,20 @@ impl Command {
         ret.arg(arg).arg(script).arg(""); // the first argument is the program name which we leave empty
 
         ret
+    }
+
+    pub fn with_arg<S: AsRef<OsStr>>(mut self, arg: S) -> Self {
+        self.arg(arg);
+        self
+    }
+
+    pub fn with_args<I, S>(mut self, args: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<OsStr>,
+    {
+        self.args(args);
+        self
     }
 
     /// Display the command.
@@ -165,7 +189,7 @@ impl Command {
         }
     }
 
-    /// Spawn the command, logging errors.
+    /// Spawn the command, with trace and error logging.
     pub fn _spawn(&mut self) -> Option<Child> {
         trace!("Spawning: {self:?}");
         self.spawn()
@@ -234,7 +258,9 @@ pub static SHELL: LazyLock<(String, String)> = LazyLock::new(|| {
     #[cfg(windows)]
     {
         let path = env::var("COMSPEC").unwrap_or_else(|_| "cmd.exe".to_string());
-        let flag = if path.to_lowercase().contains("powershell") {
+
+        let lower = path.to_lowercase();
+        let flag = if lower.contains("powershell") || lower.contains("pwsh") {
             "-Command".to_string()
         } else {
             "/C".to_string()
@@ -245,6 +271,40 @@ pub static SHELL: LazyLock<(String, String)> = LazyLock::new(|| {
     {
         let path = env::var("SHELL").unwrap_or_else(|_| "/bin/sh".to_string());
         let flag = "-c".to_string();
+        log::debug!("SHELL: {}, {}", path, flag);
+        (path, flag)
+    }
+});
+
+/// (shell path, shell arg)
+pub static INTERACTIVE_SHELL: LazyLock<(String, String)> = LazyLock::new(|| {
+    #[cfg(windows)]
+    {
+        let path = env::var("COMSPEC").unwrap_or_else(|_| "cmd.exe".to_string());
+        let lower = path.to_lowercase();
+
+        let flag = if lower.contains("powershell") || lower.contains("pwsh") {
+            "-Command".to_string()
+        } else {
+            "/C".to_string()
+        };
+        (path, flag)
+    }
+    #[cfg(unix)]
+    {
+        let path = env::var("SHELL").unwrap_or_else(|_| "/bin/sh".to_string());
+
+        let name = std::path::Path::new(&path)
+            .file_name()
+            .and_then(|s| s.to_str())
+            .unwrap_or("");
+
+        let flag = match name {
+            "bash" | "zsh" | "ksh" | "fish" => "-ic",
+            _ => "-c",
+        }
+        .to_string();
+
         log::debug!("SHELL: {}, {}", path, flag);
         (path, flag)
     }

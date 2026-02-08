@@ -4,7 +4,7 @@
 
 // purposefully limited more complicated, prefer let else
 #[macro_export]
-macro_rules! else_default {
+macro_rules! unwrap {
     ($expr:expr) => {
         match $expr {
             Some(v) => v,
@@ -13,17 +13,17 @@ macro_rules! else_default {
             }
         }
     };
-    ($expr:expr; !) => {
+    ($expr:expr; continue) => {
         match $expr {
             Some(v) => v,
             None => continue,
         }
     };
-    ($expr:expr; ?) => {
+    ($expr:expr; $err:expr) => {
         match $expr {
             Some(v) => v,
             None => {
-                return Err(Default::default());
+                return Err($err);
             }
         }
     };

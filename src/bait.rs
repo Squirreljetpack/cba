@@ -168,6 +168,16 @@ pub impl bool {
     }
 
     #[inline]
+    fn then_modify<T>(&self, base: T, modification: impl FnOnce(T) -> T) -> T {
+        if *self { modification(base) } else { base }
+    }
+
+    #[inline]
+    fn neg(&self) -> Self {
+        !*self
+    }
+
+    #[inline]
     fn change(&mut self, new: Self) -> bool {
         let ret = *self != new;
         *self = new;
