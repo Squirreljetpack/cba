@@ -8,14 +8,14 @@ where
     T: Sized,
 {
     /// Merge from maybe by taking.
-    fn maybe_take(&mut self, maybe: Option<T>) {
+    fn take_from(&mut self, maybe: Option<T>) {
         if let Some(v) = maybe {
             *self = v;
         }
     }
 
     /// Merge from maybe by cloning.
-    fn maybe_clone(&mut self, maybe: &Option<T>)
+    fn clone_from(&mut self, maybe: &Option<T>)
     where
         T: Clone,
     {
@@ -189,5 +189,15 @@ pub impl bool {
         if !self {
             std::process::exit(1)
         }
+    }
+}
+
+#[easy_ext::ext(TransformExt)]
+pub impl<T> T {
+    fn transform<Q>(self, transform: impl FnOnce(Self) -> Q) -> Q
+    where
+        T: Sized,
+    {
+        transform(self)
     }
 }

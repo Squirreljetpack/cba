@@ -16,53 +16,53 @@
 /// );
 /// ```
 macro_rules! impl_transparent_wrapper {
-        ($(#[$meta:meta])* $name:ident, $inner:ty, $default:expr) => {
-                $(#[$meta])*
-                #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-                #[serde(transparent)]
-                pub struct $name(pub $inner);
+    ($(#[$meta:meta])* $name:ident, $inner:ty, $default:expr) => {
+        $(#[$meta])*
+        #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+        #[serde(transparent)]
+        pub struct $name(pub $inner);
 
-                impl Default for $name {
-                        fn default() -> Self {
-                                $name($default)
-                        }
-                }
+        impl Default for $name {
+            fn default() -> Self {
+                $name($default)
+            }
+        }
 
-                // Conversions
-                impl From<$name> for $inner {
-                        fn from(c: $name) -> Self {
-                                c.0
-                        }
-                }
-                impl From<$inner> for $name {
-                        fn from(c: $inner) -> Self {
-                                Self(c)
-                        }
-                }
+        // Conversions
+        impl From<$name> for $inner {
+            fn from(c: $name) -> Self {
+                c.0
+            }
+        }
+        impl From<$inner> for $name {
+            fn from(c: $inner) -> Self {
+                Self(c)
+            }
+        }
 
-                // string
-                impl std::str::FromStr for $name {
-                        type Err = $crate::StringError;
+        // string
+        impl std::str::FromStr for $name {
+            type Err = $crate::StringError;
 
-                        fn from_str(s: &str) -> Result<Self, Self::Err> {
-                                let inner = s.parse::<$inner>().map_err(|e| e.to_string())?;
-                                Ok($name(inner))
-                        }
-                }
-                impl std::fmt::Display for $name {
-                        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                                write!(f, "{}", self.0)
-                        }
-                }
+            fn from_str(s: &str) -> Result<Self, Self::Err> {
+                let inner = s.parse::<$inner>().map_err(|e| e.to_string())?;
+                Ok($name(inner))
+            }
+        }
+        impl std::fmt::Display for $name {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(f, "{}", self.0)
+            }
+        }
 
-                impl std::ops::Deref for $name {
-                        type Target = $inner;
-                        fn deref(&self) -> &Self::Target { &self.0 }
-                }
-                impl std::ops::DerefMut for $name {
-                        fn deref_mut(&mut self) -> &mut Self::Target { &mut self.0 }
-                }
-        };
+        impl std::ops::Deref for $name {
+            type Target = $inner;
+            fn deref(&self) -> &Self::Target { &self.0 }
+        }
+        impl std::ops::DerefMut for $name {
+            fn deref_mut(&mut self) -> &mut Self::Target { &mut self.0 }
+        }
+    };
 }
 
 #[macro_export]
@@ -84,35 +84,35 @@ macro_rules! impl_transparent_wrapper {
 ///
 /// ```
 macro_rules! impl_restricted_wrapper {
-        ($(#[$meta:meta])* $name:ident, $inner:ty, $default:expr) => {
-                $(#[$meta])*
-                #[derive(Debug, PartialEq, Eq, Clone, serde::Serialize)]
-                #[serde(transparent)]
-                pub struct $name($inner);
+    ($(#[$meta:meta])* $name:ident, $inner:ty, $default:expr) => {
+        $(#[$meta])*
+        #[derive(Debug, PartialEq, Eq, Clone, serde::Serialize)]
+        #[serde(transparent)]
+        pub struct $name($inner);
 
-                impl $name {
-                        pub fn inner(&self) -> $inner {
-                                self.0.clone()
-                        }
-                }
+        impl $name {
+            pub fn inner(&self) -> $inner {
+                self.0.clone()
+            }
+        }
 
-                impl Default for $name {
-                        fn default() -> Self {
-                                $name($default)
-                        }
-                }
+        impl Default for $name {
+            fn default() -> Self {
+                $name($default)
+            }
+        }
 
-                impl From<$name> for $inner {
-                        fn from(c: $name) -> Self {
-                                c.0
-                        }
-                }
+        impl From<$name> for $inner {
+            fn from(c: $name) -> Self {
+                c.0
+            }
+        }
 
-                impl std::ops::Deref for $name {
-                        type Target = $inner;
-                        fn deref(&self) -> &Self::Target { &self.0 }
-                }
-        };
+        impl std::ops::Deref for $name {
+            type Target = $inner;
+            fn deref(&self) -> &Self::Target { &self.0 }
+        }
+    };
 }
 
 #[macro_export]
@@ -247,8 +247,27 @@ macro_rules! vec_ {
     (; $($elem:expr),*) => {
         vec![$($elem.to_string()),*]
     };
+    ($t:ty; $($elem:expr),*) => {
+        vec![$($t::from($elem)),*]
+    };
     ($f:expr; $($elem:expr),*) => {
-        vec![$($type::from($elem)),*]
+        vec![$($f($elem)),*]
+    };
+}
+
+#[macro_export]
+macro_rules! collect_ {
+    ($($elem:expr),* $(,)?) => {
+        [$($elem.into()),*].into_iter().collect()
+    };
+    (; $($elem:expr),*) => {
+        [$($elem.to_string()),*].into_iter().collect()
+    };
+    ($t:ty; $($elem:expr),*) => {
+        [$($t::from($elem)),*].into_iter().collect()
+    };
+    ($f:expr; $($elem:expr),*) => {
+        [$($f($elem)),*].into_iter().collect()
     };
 }
 

@@ -19,6 +19,26 @@ macro_rules! unwrap {
             None => continue,
         }
     };
+
+    ($expr:expr; |$i:ident| $body:expr) => {
+        match $expr {
+            Ok(v) => v,
+            Err(e) => {
+                return (|$i| $body)(e);
+            }
+        }
+    };
+
+    ($expr:expr; |$i:ident| $body:expr; continue) => {
+        match $expr {
+            Ok(v) => v,
+            Err(e) => {
+                (|$i| $body)(e);
+                continue;
+            }
+        }
+    };
+
     ($expr:expr; $err:expr) => {
         match $expr {
             Some(v) => v,
