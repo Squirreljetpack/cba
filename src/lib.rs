@@ -29,6 +29,9 @@ pub mod macros;
 #[cfg(feature = "text")]
 pub mod text;
 
+#[cfg(feature = "serde")]
+pub mod serde;
+
 pub mod bog;
 pub use bog::BOGGER;
 

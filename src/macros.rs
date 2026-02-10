@@ -5,18 +5,16 @@
 ///
 /// # Example
 /// ```rust
-/// use cli_boilerplate_automation::impl_transparent_wrapper;
+/// use cli_boilerplate_automation::define_transparent_wrapper;
 ///
 /// #[cfg(feature = "serde")]
-/// impl_transparent_wrapper!(
+/// define_transparent_wrapper!(
 ///     #[derive(Copy)]
-///     Count,
-///     u16,
-///     1
+///     Count: u16 = 1
 /// );
 /// ```
-macro_rules! impl_transparent_wrapper {
-    ($(#[$meta:meta])* $name:ident, $inner:ty, $default:expr) => {
+macro_rules! define_transparent_wrapper {
+    ($(#[$meta:meta])* $name:ident: $inner:ty = $default:expr) => {
         $(#[$meta])*
         #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
         #[serde(transparent)]
@@ -72,19 +70,20 @@ macro_rules! impl_transparent_wrapper {
 ///
 /// # Example
 /// ```rust
-/// use cli_boilerplate_automation::impl_restricted_wrapper;
+/// use cli_boilerplate_automation::define_restricted_wrapper;
 ///
 /// #[cfg(feature = "serde")] {
-/// impl_restricted_wrapper!(Percentage, u16, 100);
-/// impl Percentage {
-///     pub fn new(value: u16) -> Self {
-///         if value <= 100 { Self(value) } else { Self(100) }
+///     define_restricted_wrapper!(Percentage: u16 = 100);
+///     impl Percentage {
+///         pub fn new(value: u16) -> Self {
+///             if value <= 100 { Self(value) } else { Self(100) }
+///         }
 ///     }
 /// }
 ///
 /// ```
-macro_rules! impl_restricted_wrapper {
-    ($(#[$meta:meta])* $name:ident, $inner:ty, $default:expr) => {
+macro_rules! define_restricted_wrapper {
+    ($(#[$meta:meta])* $name:ident: $inner:ty = $default:expr) => {
         $(#[$meta])*
         #[derive(Debug, PartialEq, Eq, Clone, serde::Serialize)]
         #[serde(transparent)]
@@ -117,30 +116,24 @@ macro_rules! impl_restricted_wrapper {
 
 #[macro_export]
 /// Implement a wrapper around a container type (i.e. HashMap).
-/// Implements the Deref, DerefMut, Default and IntoIterator traits, and functions new and prepend.
+/// Implements the Deref, DerefMut, Default and IntoIterator/FromIterator traits and the new function.
 ///
 /// ```rust
-/// use cli_boilerplate_automation::impl_collection_wrapper;
+/// use cli_boilerplate_automation::define_collection_wrapper;
 /// pub struct Module {};
-/// impl_collection_wrapper!(
+/// define_collection_wrapper!(
 ///     #[cfg_attr(feature = "serde", derive(Debug, serde::Serialize, serde::Deserialize))]
-///     Modules,
-///     std::collections::HashMap<String, Module>
+///     Modules: std::collections::HashMap<String, Module>
 /// );
 /// ```
-macro_rules! impl_collection_wrapper {
-    ($(#[$meta:meta])* $name:ident, $inner:ty) => {
+macro_rules! define_collection_wrapper {
+    ($(#[$meta:meta])* $name:ident: $inner:ty) => {
         $(#[$meta])*
         pub struct $name($inner);
 
         impl $name {
             pub fn new() -> Self {
                 Self(<$inner>::new())
-            }
-
-            pub fn prepend(&mut self, initial: &mut Self) {
-                initial.0.extend(self.0.drain());
-                std::mem::swap(initial, self);
             }
         }
 
@@ -161,6 +154,17 @@ macro_rules! impl_collection_wrapper {
         impl Default for $name {
             fn default() -> Self {
                 Self(<$inner>::new())
+            }
+        }
+
+        impl From<$name> for $inner {
+            fn from(c: $name) -> Self {
+                c.0
+            }
+        }
+        impl From<$inner> for $name {
+            fn from(c: $inner) -> Self {
+                Self(c)
             }
         }
 
@@ -188,6 +192,12 @@ macro_rules! impl_collection_wrapper {
 
             fn into_iter(self) -> Self::IntoIter {
                 (&mut self.0).into_iter()
+            }
+        }
+
+        impl FromIterator<<$inner as IntoIterator>::Item> for $name {
+            fn from_iter<I: IntoIterator<Item = <$inner as IntoIterator>::Item>>(iter: I) -> Self {
+                Self(iter.into_iter().collect())
             }
         }
     };
@@ -239,53 +249,77 @@ macro_rules! _log {
 #[macro_export]
 /// Map a function over the elements of a vec![].
 /// By default, .into() is applied.
-/// The prefix ; is shorthand for ToString::to_string.
+/// To specify the mapping, a function or type followed by `|` can precede the elements.
+/// The pure prefix | is shorthand for ToString::to_string.
 macro_rules! vec_ {
     ($($elem:expr),* $(,)?) => {
         vec![$($elem.into()),*]
     };
-    (; $($elem:expr),*) => {
+    (| $($elem:expr),*) => {
         vec![$($elem.to_string()),*]
     };
-    ($t:ty; $($elem:expr),*) => {
+    ($t:ty | $($elem:expr),*) => {
         vec![$($t::from($elem)),*]
     };
-    ($f:expr; $($elem:expr),*) => {
+    ($f:ident | $($elem:expr),*) => {
         vec![$($f($elem)),*]
     };
 }
 
 #[macro_export]
+/// Map a function over elements of [] and collect.
+/// By default, .into() is applied.
+/// To specify the mapping, a function or type followed by `|` can precede the elements.
+/// The pure prefix | is shorthand for ToString::to_string.
 macro_rules! collect_ {
     ($($elem:expr),* $(,)?) => {
         [$($elem.into()),*].into_iter().collect()
     };
-    (; $($elem:expr),*) => {
+    (| $($elem:expr),*) => {
         [$($elem.to_string()),*].into_iter().collect()
     };
-    ($t:ty; $($elem:expr),*) => {
+    ($t:ty | $($elem:expr),*) => {
         [$($t::from($elem)),*].into_iter().collect()
     };
-    ($f:expr; $($elem:expr),*) => {
+    ($f:ident | $($elem:expr),*) => {
         [$($f($elem)),*].into_iter().collect()
     };
 }
 
 #[macro_export]
-/// Write newline-delimited strings directly to stdout
+/// Write newline-delimited strings directly to stdout without dynamic dispatch.
+///
+/// # Note
+/// The `;` delimiter inserts new-lines, while `,` does not.
+/// A trailing newline is always added.
 macro_rules! prints {
-    ($($s:expr),+ $(,)?) => {{
+    // write to custom buffer
+    ($( $( $s:expr ),+ );* => $buf:expr) => {{
+        use std::io::Write;
+        $(
+            $(
+                let _ = $buf.write_all($s.as_bytes());
+            )+
+            let _ = $buf.write_all(b"\n");
+        )*
+    }};
+
+    // default: stdout
+    ( $( $( $s:expr ),+ );* ) => {{
         use std::io::{self, Write};
         let mut out = io::stdout().lock();
+
         $(
-            let _ = out.write_all($s.as_bytes());
+            $(
+                let _ = out.write_all($s.as_bytes());
+            )+
             let _ = out.write_all(b"\n");
-        )+
+        )*
     }};
 }
 
 #[macro_export]
-// Easier than format! to concatenate strings
+// Easier than format! for concatenating strings
 macro_rules! cats {
     ( $( $x:expr ),* $(,)? ) => {{
         let mut s = String::new();
@@ -295,4 +329,31 @@ macro_rules! cats {
         )*
         s
     }};
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn writes_to_buffer() {
+        let mut buf = Vec::new();
+
+        prints!(
+            "hello", " world";
+            "line 2";
+            "a", "b", "c" => &mut buf
+        );
+
+        assert_eq!(
+            std::str::from_utf8(&buf).unwrap(),
+            "hello world\nline 2\nabc\n"
+        );
+
+        let mut buf = Vec::new();
+
+        prints!(
+            "hello", " world" => &mut buf
+        );
+
+        assert_eq!(std::str::from_utf8(&buf).unwrap(), "hello world\n");
+    }
 }

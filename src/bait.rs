@@ -42,7 +42,8 @@ pub impl<T, E> Result<T, E> {
             Err(e) => Err(e.into()),
         }
     }
-    // debated between prefix and prefix_err, chose the first because anyhow just calls it context
+
+    // debated between prefix and prefix_err, chose the first because anyhow just calls it context.
     /// Convert Err(e) to the string '{prefix}: {e}'
     fn prefix(self, prefix: impl Display) -> Result<T, StringError>
     where
@@ -54,20 +55,23 @@ pub impl<T, E> Result<T, E> {
         }
     }
 
-    fn context(self, prefix: impl Display) -> anyhow::Result<T>
-    where
-        E: std::fmt::Display,
-    {
-        match self {
-            Ok(val) => Ok(val),
-            Err(e) => Err(anyhow::anyhow!("{prefix}: {e}")),
-        }
-    }
+    // fn context(self, prefix: impl Display) -> anyhow::Result<T>
+    // where
+    //     E: std::fmt::Display,
+    // {
+    //     match self {
+    //         Ok(val) => Ok(val),
+    //         Err(e) => Err(anyhow::anyhow!("{prefix}: {e}")),
+    //     }
+    // }
 
     // logging
 
     /// Log the error.
-    /// See also: [`ResultExt::prefix`].
+    ///
+    /// # Notes
+    /// Can be used in conjunction with [`prefix`](ResultExt::prefix) to add context.
+    /// See also: [`crate::bog::BogOkExt`] to bog instead of log.
     fn elog(self) -> Result<T, E>
     where
         E: Display,
@@ -78,8 +82,11 @@ pub impl<T, E> Result<T, E> {
         })
     }
 
-    /// [`elog`], then consume the error.
-    /// See also: [`crate::bog::BogOkExt`].
+    /// [`elog`](ResultExt::elog), then consume the error.
+    ///
+    /// # Notes
+    /// Can be used in conjunction with [`prefix`](ResultExt::prefix) to add context.
+    /// See also: [`crate::bog::BogOkExt`] to bog instead of log.
     fn _elog(self) -> Option<T>
     where
         E: Display,
@@ -93,6 +100,11 @@ pub impl<T, E> Result<T, E> {
         }
     }
 
+    /// Log the error as a warning.
+    ///
+    /// # Notes
+    /// Can be used in conjunction with [`prefix`](ResultExt::prefix) to add context.
+    /// See also: [`crate::bog::BogOkExt`] to bog instead of log.
     fn wlog(self) -> Result<T, E>
     where
         E: Display,
@@ -103,6 +115,11 @@ pub impl<T, E> Result<T, E> {
         })
     }
 
+    /// [`wlog`](ResultExt::wlog), then consume the error.
+    ///
+    /// # Notes
+    /// Can be used in conjunction with [`prefix`](ResultExt::prefix) to add context.
+    /// See also: [`crate::bog::BogOkExt`] to bog instead of log.
     fn _wlog(self) -> Option<T>
     where
         E: Display,
@@ -137,6 +154,7 @@ pub impl<T> Option<T> {
         self.or_exit()
     }
 
+    /// Log the error if None, then transform to a Result.
     fn elog<E: Display>(self, err: E) -> Result<T, E> {
         match self {
             Some(v) => Ok(v),
@@ -147,12 +165,23 @@ pub impl<T> Option<T> {
         }
     }
 
-    fn context<E: Display>(self, err: E) -> anyhow::Result<T> {
+    /// Log the error as a warning if None, then transform to a Result.
+    fn wlog<E: Display>(self, err: E) -> Result<T, E> {
         match self {
             Some(v) => Ok(v),
-            None => Err(anyhow::anyhow!("{err}")),
+            None => {
+                log::warn!("{err}");
+                Err(err)
+            }
         }
     }
+
+    // fn context<E: Display>(self, err: E) -> anyhow::Result<T> {
+    //     match self {
+    //         Some(v) => Ok(v),
+    //         None => Err(anyhow::anyhow!("{err}")),
+    //     }
+    // }
 }
 
 #[easy_ext::ext(BoolExt)]
