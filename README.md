@@ -99,6 +99,9 @@ define_collection_wrapper!(
 ### Others
 
 - Some extension traits
+  - Float, Option, Result, Bool
+  - Mutex: `_lock` (ignore poisoning)
+  - Transform
 - initialization helpers
 
 For example:
@@ -108,7 +111,6 @@ For example:
 err_count += curr
 	.update_from_config_path(dir, lib, &name, targets)?
 	.transform(|s| if s == usize::MAX { 0 } else { s });
-
 ```
 
 ## Optional features

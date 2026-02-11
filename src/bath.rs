@@ -1,27 +1,7 @@
 //! Path manipulation
 
+use crate::StringError;
 use std::path::{Component, Path, PathBuf};
-
-/// Get the (lossy) basename of a valid path.
-/// Empty if path has no filename.
-/// Warns on error.
-pub fn filename(path: &Path) -> Cow<'_, str> {
-    match path.file_name() {
-        Some(s) => s.to_string_lossy(),
-        None => {
-            log::warn!("Failed to determine basename of {path:?}");
-            "".into()
-        }
-    }
-}
-
-pub fn _filename(path: &Path) -> &str {
-    let err_prefix = format!("Failed to detezrmine basename of {path:?}");
-    path.file_name()
-        ._ebog(&err_prefix)
-        .to_str()
-        ._ebog(&err_prefix)
-}
 
 /// Split path around last '.'
 pub fn split_ext(p: &str) -> [&str; 2] {
@@ -49,6 +29,31 @@ pub impl<T: AsRef<Path>> T {
         .to_string()
     }
 
+    /// Get the (lossy) basename of a valid path.
+    /// Returns empty string + log::warn! if path has no filename.
+    fn filename(&self) -> Cow<'_, str> {
+        let path = self.as_ref();
+
+        match path.file_name() {
+            Some(s) => s.to_string_lossy(),
+            None => {
+                log::warn!("Failed to determine basename of {path:?}");
+                "".into()
+            }
+        }
+    }
+
+    /// Convert to str, or provide useful error.
+    fn _filename(&self) -> Result<&str, StringError> {
+        let path = self.as_ref();
+
+        let err_prefix = format!("Failed to determine basename of {path:?}");
+        path.file_name()
+            .ok_or(StringError(err_prefix.clone()))?
+            .to_str()
+            .ok_or(StringError(err_prefix))
+    }
+
     fn display_short(&self, home_dir: &Path) -> String {
         let path = self.as_ref();
         if let Ok(stripped) = path.strip_prefix(home_dir) {
@@ -62,6 +67,7 @@ pub impl<T: AsRef<Path>> T {
         self.as_ref().normalize().iter().count()
     }
 
+    /// Robustly determine whether a file is hidden
     fn is_hidden(&self) -> bool {
         let mut skip = 0;
 
@@ -179,8 +185,6 @@ macro_rules! expr_as_path_fn {
 use std::borrow::Cow;
 use std::ffi::{OsStr, OsString};
 
-use crate::bog::BogUnwrapExt;
-
 /// not sure if as_encoded_bytes is better
 #[cfg(unix)]
 pub fn os_str_to_bytes(string: &OsStr) -> Cow<'_, [u8]> {
@@ -213,6 +217,12 @@ pub fn bytes_to_os_string(bytes: Vec<u8>) -> OsString {
         .collect();
 
     OsString::from_wide(&wide)
+}
+
+/// to_string_lossy for any type AsRef<OsStr>.
+/// Note: (Intent is that it's possibly useful for macros).
+pub fn to_string_lossy(s: &impl AsRef<std::ffi::OsStr>) -> std::borrow::Cow<'_, str> {
+    s.as_ref().to_string_lossy()
 }
 
 // ----------------------
@@ -268,7 +278,7 @@ pub fn auto_dest_for_src(
             }
 
             let parent = initial_dest.parent().unwrap_or(&initial_dest);
-            let s = filename(&initial_dest);
+            let s = initial_dest.filename();
             let [stem, ext] = split_ext(&s);
 
             for i in 1usize.. {

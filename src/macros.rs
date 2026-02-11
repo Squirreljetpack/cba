@@ -1,7 +1,7 @@
 #[macro_export]
 /// Implement a transparent wrapper around an inner type:
 ///
-/// Implements Deref, DerefMut, FromStr, Display, PartialEq, Clone, Debug, Serialize, Deserialize.
+/// Implements Deref, DerefMut, FromStr, Display, Debug, PartialEq, Serialize, Deserialize.
 ///
 /// # Example
 /// ```rust
@@ -14,11 +14,11 @@
 /// );
 /// ```
 macro_rules! define_transparent_wrapper {
-    ($(#[$meta:meta])* $name:ident: $inner:ty = $default:expr) => {
+    ($(#[$meta:meta])* $name:ident: $(#[$inner_meta:meta])* $inner:path = $default:expr) => {
         $(#[$meta])*
-        #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+        #[derive(Debug, PartialEq, serde::Serialize, serde::Deserialize)]
         #[serde(transparent)]
-        pub struct $name(pub $inner);
+        pub struct $name($(#[$inner_meta])* pub $inner);
 
         impl Default for $name {
             fn default() -> Self {
@@ -83,11 +83,11 @@ macro_rules! define_transparent_wrapper {
 ///
 /// ```
 macro_rules! define_restricted_wrapper {
-    ($(#[$meta:meta])* $name:ident: $inner:ty = $default:expr) => {
+    ($(#[$meta:meta])* $name:ident: $(#[$inner_meta:meta])* $inner:path = $default:expr) => {
         $(#[$meta])*
-        #[derive(Debug, PartialEq, Eq, Clone, serde::Serialize)]
+        #[derive(Debug, PartialEq, serde::Serialize)]
         #[serde(transparent)]
-        pub struct $name($inner);
+        pub struct $name($(#[$inner_meta])* $inner);
 
         impl $name {
             pub fn inner(&self) -> $inner {
@@ -127,9 +127,9 @@ macro_rules! define_restricted_wrapper {
 /// );
 /// ```
 macro_rules! define_collection_wrapper {
-    ($(#[$meta:meta])* $name:ident: $inner:ty) => {
+    ($(#[$meta:meta])* $name:ident: $(#[$inner_meta:meta])* $inner:path) => {
         $(#[$meta])*
-        pub struct $name($inner);
+        pub struct $name($(#[$inner_meta])* $inner);
 
         impl $name {
             pub fn new() -> Self {
@@ -186,14 +186,14 @@ macro_rules! define_collection_wrapper {
             }
         }
 
-        impl<'a> IntoIterator for &'a mut $name {
-            type Item = <&'a mut $inner as IntoIterator>::Item;
-            type IntoIter = <&'a mut $inner as IntoIterator>::IntoIter;
+        // impl<'a> IntoIterator for &'a mut $name {
+        //     type Item = <&'a mut $inner as IntoIterator>::Item;
+        //     type IntoIter = <&'a mut $inner as IntoIterator>::IntoIter;
 
-            fn into_iter(self) -> Self::IntoIter {
-                (&mut self.0).into_iter()
-            }
-        }
+        //     fn into_iter(self) -> Self::IntoIter {
+        //         (&mut self.0).into_iter()
+        //     }
+        // }
 
         impl FromIterator<<$inner as IntoIterator>::Item> for $name {
             fn from_iter<I: IntoIterator<Item = <$inner as IntoIterator>::Item>>(iter: I) -> Self {
@@ -320,11 +320,11 @@ macro_rules! prints {
 
 #[macro_export]
 // Easier than format! for concatenating strings
-macro_rules! cats {
+macro_rules! concat_ {
     ( $( $x:expr ),* $(,)? ) => {{
+        use std::fmt::Write;
         let mut s = String::new();
         $(
-            use std::fmt::Write;
             write!(&mut s, "{}", $x).unwrap();
         )*
         s

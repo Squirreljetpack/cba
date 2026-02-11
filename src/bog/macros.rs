@@ -50,6 +50,15 @@ macro_rules! unwrap {
         }
     };
 
+    ($expr:expr; $err:expr) => {
+        match $expr {
+            Some(v) => v,
+            None => {
+                return Err($err);
+            }
+        }
+    };
+
     ($expr:expr; |$i:ident| $body:expr) => {
         match $expr {
             Ok(v) => v,
@@ -65,15 +74,6 @@ macro_rules! unwrap {
             Err(e) => {
                 (|$i| $body)(e);
                 continue;
-            }
-        }
-    };
-
-    ($expr:expr; $err:expr) => {
-        match $expr {
-            Some(v) => v,
-            None => {
-                return Err($err);
             }
         }
     };

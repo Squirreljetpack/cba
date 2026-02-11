@@ -55,16 +55,6 @@ pub impl<T, E> Result<T, E> {
         }
     }
 
-    // fn context(self, prefix: impl Display) -> anyhow::Result<T>
-    // where
-    //     E: std::fmt::Display,
-    // {
-    //     match self {
-    //         Ok(val) => Ok(val),
-    //         Err(e) => Err(anyhow::anyhow!("{prefix}: {e}")),
-    //     }
-    // }
-
     // logging
 
     /// Log the error.
@@ -221,6 +211,21 @@ pub impl bool {
     }
 }
 
+// ---------------------------------
+
+use std::sync::{Mutex, MutexGuard};
+#[easy_ext::ext(MutexExt)]
+pub impl<T> Mutex<T> {
+    fn _lock(&self) -> MutexGuard<'_, T> {
+        match self.lock() {
+            Ok(g) => g,
+            Err(poisoned) => poisoned.into_inner(),
+        }
+    }
+}
+
+// ---------------------------------
+
 #[easy_ext::ext(TransformExt)]
 pub impl<T> T {
     fn transform<Q>(self, transform: impl FnOnce(Self) -> Q) -> Q
@@ -228,5 +233,33 @@ pub impl<T> T {
         T: Sized,
     {
         transform(self)
+    }
+
+    fn cmp_exc<'a, E>(&'a mut self, expected: E, new: T) -> bool
+    where
+        &'a mut T: PartialEq<E>,
+    {
+        if self == expected {
+            *self = new;
+            true
+        } else {
+            false
+        }
+    }
+
+    fn modify<Q>(mut self, modify: impl FnOnce(&mut Self) -> Q) -> Self
+    where
+        T: Sized,
+    {
+        modify(&mut self);
+        self
+    }
+
+    fn dbg(self) -> Self
+    where
+        T: std::fmt::Debug,
+    {
+        dbg!(&self);
+        self
     }
 }

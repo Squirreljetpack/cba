@@ -10,7 +10,7 @@ use std::{
     sync::LazyLock,
 };
 
-#[easy_ext::ext(ChildExit)]
+#[easy_ext::ext(ChildExt)]
 impl Child {
     pub fn wait_for_code(&mut self) -> i32 {
         if let Some(status) = self.wait()._elog() {
