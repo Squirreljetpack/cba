@@ -165,13 +165,6 @@ pub impl<T> Option<T> {
             }
         }
     }
-
-    // fn context<E: Display>(self, err: E) -> anyhow::Result<T> {
-    //     match self {
-    //         Some(v) => Ok(v),
-    //         None => Err(anyhow::anyhow!("{err}")),
-    //     }
-    // }
 }
 
 #[easy_ext::ext(BoolExt)]
@@ -187,20 +180,8 @@ pub impl bool {
     }
 
     #[inline]
-    fn then_modify<T>(&self, base: T, modification: impl FnOnce(T) -> T) -> T {
-        if *self { modification(base) } else { base }
-    }
-
-    #[inline]
     fn neg(&self) -> Self {
         !*self
-    }
-
-    #[inline]
-    fn change(&mut self, new: Self) -> bool {
-        let ret = *self != new;
-        *self = new;
-        ret
     }
 
     #[inline]
@@ -235,6 +216,48 @@ pub impl<T> T {
         transform(self)
     }
 
+    /// # Example
+    ///
+    /// ```rust,ignore
+    /// Table::new(rows, widths.to_vec())
+    ///     .block(block)
+    ///     .transform_if(
+    ///         true,
+    ///         |t| t.style(style),
+    ///     )
+    ///```
+    fn transform_if(self, condition: bool, transform: impl FnOnce(Self) -> Self) -> Self
+    where
+        T: Sized,
+    {
+        if condition { transform(self) } else { self }
+    }
+
+    fn modify<Q>(mut self, modify: impl FnOnce(&mut Self) -> Q) -> Self
+    where
+        T: Sized,
+    {
+        modify(&mut self);
+        self
+    }
+
+    /// # Example
+    ///
+    /// ```rust
+    /// use cli_boilerplate_automation::bait::TransformExt;
+    ///
+    /// true.modify_if(cfg!(debug_assertions), |x| *dbg!(x));
+    ///```
+    fn modify_if<Q>(mut self, condition: bool, modify: impl FnOnce(&mut Self) -> Q) -> Self
+    where
+        T: Sized,
+    {
+        if condition {
+            modify(&mut self);
+        }
+        self
+    }
+
     fn cmp_exc<'a, E>(&'a mut self, expected: E, new: T) -> bool
     where
         &'a mut T: PartialEq<E>,
@@ -245,14 +268,6 @@ pub impl<T> T {
         } else {
             false
         }
-    }
-
-    fn modify<Q>(mut self, modify: impl FnOnce(&mut Self) -> Q) -> Self
-    where
-        T: Sized,
-    {
-        modify(&mut self);
-        self
     }
 
     fn dbg(self) -> Self

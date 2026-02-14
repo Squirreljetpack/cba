@@ -101,7 +101,7 @@ define_collection_wrapper!(
 - Some extension traits
   - Float, Option, Result, Bool
   - Mutex: `_lock` (ignore poisoning)
-  - Transform
+  - Transform: Blanket impl of some post-fix methods. These are sometimes nice to use particularly with the builder pattern.
 - initialization helpers
 
 For example:

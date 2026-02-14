@@ -6,6 +6,7 @@ use log::{debug, trace};
 use std::{
     env,
     ffi::{OsStr, OsString},
+    path::Path,
     process::{Child, ChildStdout, Command, Stdio, exit},
     sync::LazyLock,
 };
@@ -276,39 +277,36 @@ pub static SHELL: LazyLock<(String, String)> = LazyLock::new(|| {
     }
 });
 
-/// (shell path, shell arg)
-pub static INTERACTIVE_SHELL: LazyLock<(String, String)> = LazyLock::new(|| {
-    #[cfg(windows)]
-    {
-        let path = env::var("COMSPEC").unwrap_or_else(|_| "cmd.exe".to_string());
-        let lower = path.to_lowercase();
-
-        let flag = if lower.contains("powershell") || lower.contains("pwsh") {
-            "-Command".to_string()
-        } else {
-            "/C".to_string()
-        };
-        (path, flag)
-    }
+/// # Note
+/// AI generated cuz i dunno windows, seems fine?
+pub fn current_shell() -> String {
     #[cfg(unix)]
     {
-        let path = env::var("SHELL").unwrap_or_else(|_| "/bin/sh".to_string());
-
-        let name = std::path::Path::new(&path)
-            .file_name()
-            .and_then(|s| s.to_str())
-            .unwrap_or("");
-
-        let flag = match name {
-            "bash" | "zsh" | "ksh" | "fish" => "-ic",
-            _ => "-c",
+        if let Ok(shell) = env::var("SHELL") {
+            if let Some(name) = Path::new(&shell).file_name().and_then(|n| n.to_str()) {
+                return name.to_ascii_lowercase();
+            }
         }
-        .to_string();
-
-        log::debug!("SHELL: {}, {}", path, flag);
-        (path, flag)
     }
-});
+
+    #[cfg(windows)]
+    {
+        // Prefer modern PowerShell if present
+        if let Ok(ps) = env::var("PSModulePath") {
+            if !ps.is_empty() {
+                return "pwsh".into();
+            }
+        }
+
+        if let Ok(comspec) = env::var("COMSPEC") {
+            if let Some(name) = Path::new(&comspec).file_name().and_then(|n| n.to_str()) {
+                return name.to_ascii_lowercase();
+            }
+        }
+    }
+
+    String::new()
+}
 
 pub fn tty_or_inherit() -> Stdio {
     if let Ok(mut tty) = std::fs::File::open("/dev/tty") {

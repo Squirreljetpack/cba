@@ -49,11 +49,12 @@ pub mod types {
 
     // Deserializable from true/false/always/never
     pub enum When {
-        #[cfg_attr(feature = "serde", serde(alias = "false"))]
+        #[cfg_attr(feature = "serde", serde(alias = "false", alias = "never"))]
         Never,
         #[default]
+        #[cfg_attr(feature = "serde", serde(alias = "auto"))]
         Auto,
-        #[cfg_attr(feature = "serde", serde(alias = "true"))]
+        #[cfg_attr(feature = "serde", serde(alias = "true", alias = "always"))]
         Always,
     }
 
