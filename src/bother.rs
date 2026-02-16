@@ -18,11 +18,11 @@ pub mod level_filter {
     /// Logging filter level.
     /// # Example
     /// ```rust,ignore
-    ///    /// Reduces the level of verbosity (the min level is -qq).
+    ///    /// Reduce the level of verbosity (the min level is -qq).
     ///    #[clap(short, conflicts_with("verbose"), action = ArgAction::Count)]
     ///    quiet: u8,
     ///
-    ///    /// Increases the level of verbosity (the max level is -vvv).
+    ///    /// Increase the level of verbosity (the max level is -vvv).
     ///    #[clap(short, conflicts_with("quiet"), action = ArgAction::Count)]
     ///    verbose: u8,
     /// ```
@@ -39,6 +39,27 @@ pub mod level_filter {
             // Quiet.
             (1, _) => LevelFilter::Error,
             (..) => LevelFilter::Off,
+        }
+    }
+
+    /// Converts a numeric verbosity level into a [`LevelFilter`].
+    ///
+    /// The mapping is:
+    ///
+    /// - `0` or `1` → disables logging entirely  
+    /// - `2` → logs only errors  
+    /// - `3` (default) → logs warnings and errors  
+    /// - `4` → logs info, warnings, and errors  
+    /// - `5` → logs debug and above  
+    /// - `6` or higher → logs everything (trace and above)
+    pub fn from_verbosity(verbosity: u8) -> LevelFilter {
+        match verbosity {
+            0 | 1 => LevelFilter::Off,
+            2 => LevelFilter::Error,
+            3 => LevelFilter::Warn,
+            4 => LevelFilter::Info,
+            5 => LevelFilter::Debug,
+            _ => LevelFilter::Trace,
         }
     }
 }

@@ -1,70 +1,92 @@
-/// Splits a string on whitespace, respecting nested parentheses and escaped parentheses (`\(` or `\)`).
+/// Splits a string on whitespace, respecting nested delimiters and escapes.
 ///
-/// - Whitespace outside parentheses is a delimiter.
-/// - Nesting starts at the first unescaped `(` and ends at the matching `)`.
-/// - Outermost parentheses are omitted in the result.
-/// - Escaped parentheses are included literally in tokens.
+/// - Whitespace outside delimiters is a separator.
+/// - `non_consuming` specifies a delimiter pair whose outer delimiters are preserved.
+/// - `consuming` specifies a delimiter pair whose outer delimiters are removed.
+/// - At least one of `non_consuming` or `consuming` must be `Some`.
+/// - Nested delimiters of the same active type are always preserved.
+/// - Escaped whitespace outside delimiters and escaped delimiters (`\(`, `\]`, etc.) and are included literally.
 ///
-/// Returns `Ok(Vec<String>)` on success, or `Err(i32)` on unbalanced parentheses:
-/// - Positive value: number of unmatched opening parentheses remaining at end of input.
-/// - Negative value: index of the extra closing parenthesis encountered.
-///
-/// # Examples
-///
-/// ```rust
-/// use cli_boilerplate_automation::text::split::split_nesting;
-///
-/// let input3 = "foo (bar";
-/// match split_nesting(input3) {
-///     Ok(_) => unreachable!(),
-///     Err(n) if n > 0 => println!("Encountered {} unclosed parentheses", n),
-///     Err(n) if n < 0 => println!("Extra closing parenthesis at index {}", -n),
-///     _ => unreachable!(),
-/// }
-///
-/// ```
-pub fn split_nesting(input: &str, left: char, right: char) -> Result<Vec<String>, i32> {
+/// Returns `Ok(Vec<String>)` on success, or `Err(i32)` on unbalanced delimiters:
+/// - Positive value: number of unmatched opening delimiters remaining at end.
+/// - Negative value: index of the extra closing delimiter encountered.
+pub fn split_nesting(
+    input: &str,
+    non_consuming: impl Into<Option<[char; 2]>>,
+    consuming: impl Into<Option<[char; 2]>>,
+) -> Result<Vec<String>, i32> {
     let mut result = Vec::new();
     let mut nesting: i32 = 0;
     let mut token = String::new();
+    let consuming = consuming.into();
+    let [left, right] = non_consuming.into().unwrap_or_else(|| consuming.unwrap());
 
     let mut chars = input.chars().enumerate().peekable();
+    let mut in_consuming_delimiter = false;
 
-    while let Some((i, ch)) = chars.next() {
-        match ch {
+    while let Some((i, c)) = chars.next() {
+        let is_consuming_delimiter =
+            |right: bool| consuming.is_some_and(|x| c == x[right as usize]);
+
+        match c {
             '\\' => {
                 if let Some(&(_, next)) = chars.peek() {
-                    if next == left || next == right {
+                    if nesting == 0
+                        && ([left, right].contains(&next)
+                            || consuming.is_some_and(|x| x.contains(&next))
+                            || next.is_whitespace())
+                    {
                         token.push(next);
-                        chars.next(); // consume escaped char
+                        chars.next();
+                        continue;
+                    } else if (in_consuming_delimiter
+                        && consuming.is_some_and(|x| x.contains(&next)))
+                        || (!in_consuming_delimiter && [left, right].contains(&next))
+                    {
+                        token.push(next);
+                        chars.next();
                         continue;
                     }
                 }
-                token.push(ch);
+                token.push(c);
             }
 
-            c if c == left => {
+            // opening
+            c if c == left || is_consuming_delimiter(false) => {
                 if nesting > 0 {
-                    token.push(ch); // nested '(' included
+                    if in_consuming_delimiter ^ is_consuming_delimiter(false) {
+                        continue;
+                    }
+                    token.push(c);
+                } else if is_consuming_delimiter(false) {
+                    in_consuming_delimiter = true;
+                } else {
+                    token.push(c);
                 }
                 nesting += 1;
             }
 
-            c if c == right => {
+            // closing
+            c if (c == right && !in_consuming_delimiter)
+                || (is_consuming_delimiter(true) && in_consuming_delimiter) =>
+            {
                 nesting -= 1;
                 if nesting < 0 {
                     return Err(-(i as i32));
                 }
 
                 if nesting == 0 {
-                    // end of outermost parentheses: push token
+                    if !is_consuming_delimiter(true) {
+                        token.push(c);
+                    }
+
                     if !token.is_empty() {
                         result.push(token.clone());
                         token.clear();
                     }
-                    // omit outer ')'
+                    in_consuming_delimiter = false;
                 } else {
-                    token.push(ch); // nested ')' included
+                    token.push(c);
                 }
             }
 
@@ -75,9 +97,7 @@ pub fn split_nesting(input: &str, left: char, right: char) -> Result<Vec<String>
                 }
             }
 
-            c => {
-                token.push(c);
-            }
+            c => token.push(c),
         }
     }
 
@@ -97,36 +117,49 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_basic_and_nested() {
+    fn test_basic_and_nested_non_consuming_default() {
         let input = "foo (bar baz (qux)) quux";
-        let parsed = split_nesting(input, '(', ')').unwrap();
-        assert_eq!(parsed, vec!["foo", "bar baz (qux)", "quux"]);
+        let parsed = split_nesting(input, Some(['(', ')']), None).unwrap();
+        assert_eq!(parsed, vec!["foo", "(bar baz (qux))", "quux"]);
     }
 
     #[test]
     fn test_escaped_parentheses() {
         let input = r"foo \(bar baz\) qux";
-        let parsed = split_nesting(input, '(', ')').unwrap();
+        let parsed = split_nesting(input, Some(['(', ')']), None).unwrap();
         assert_eq!(parsed, vec!["foo", "(bar", "baz)", "qux"]);
     }
 
     #[test]
-    fn test_outer_parentheses_omitted() {
+    fn test_outer_parentheses_consuming() {
         let input = "(foo bar)";
-        let parsed = split_nesting(input, '(', ')').unwrap();
+        let parsed = split_nesting(input, None, Some(['(', ')'])).unwrap();
         assert_eq!(parsed, vec!["foo bar"]);
     }
 
     #[test]
-    fn test_outer_with_nested_and_escapes() {
+    fn test_outer_with_nested_and_escapes_consuming() {
         let input = r"(foo \(bar) baz (qux\))";
-        let parsed = split_nesting(input, '(', ')').unwrap();
+        let parsed = split_nesting(input, None, Some(['(', ')'])).unwrap();
         assert_eq!(parsed, vec!["foo (bar", "baz", "qux)"]);
     }
 
     #[test]
     fn test_unbalanced() {
-        assert_eq!(split_nesting("foo (bar", '(', ')').unwrap_err(), 1);
-        assert_eq!(split_nesting("foo )", '(', ')').unwrap_err(), -1);
+        assert_eq!(
+            split_nesting("foo (bar", Some(['(', ')']), None).unwrap_err(),
+            1
+        );
+        assert_eq!(
+            split_nesting("foo )", Some(['(', ')']), None).unwrap_err(),
+            -4
+        );
+    }
+
+    #[test]
+    fn test_mixed_brackets_and_escapes() {
+        let input = r"(( )) [one word] [\[]";
+        let parsed = split_nesting(input, Some(['(', ')']), Some(['[', ']'])).unwrap();
+        assert_eq!(parsed, vec!["(( ))", "one word", "["]);
     }
 }
