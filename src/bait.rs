@@ -43,6 +43,17 @@ pub impl<T, E> Result<T, E> {
         }
     }
 
+    /// cast result to StringError.
+    fn cast_(self) -> Result<T, StringError>
+    where
+        E: Display,
+    {
+        match self {
+            Ok(s) => Ok(s),
+            Err(e) => Err(e.to_string().into()),
+        }
+    }
+
     // debated between prefix and prefix_err, chose the first because anyhow just calls it context.
     /// Convert Err(e) to the string '{prefix}: {e}'
     fn prefix(self, prefix: impl Display) -> Result<T, StringError>

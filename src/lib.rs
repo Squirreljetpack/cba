@@ -36,7 +36,7 @@ pub mod bog;
 pub use bog::BOGGER;
 
 use std::fmt;
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct StringError(pub String);
 
 impl fmt::Display for StringError {

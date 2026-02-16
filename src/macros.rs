@@ -248,40 +248,40 @@ macro_rules! _log {
 
 #[macro_export]
 /// Map a function over the elements of a vec![].
-/// By default, .into() is applied.
+/// By default, .to_string() is applied.
 /// To specify the mapping, a function or type followed by `|` can precede the elements.
-/// The pure prefix | is shorthand for ToString::to_string.
+/// The pure prefix `:` is shorthand for Into::into.
 macro_rules! vec_ {
     ($($elem:expr),* $(,)?) => {
-        vec![$($elem.into()),*]
-    };
-    (| $($elem:expr),*) => {
         vec![$($elem.to_string()),*]
     };
-    ($t:ty | $($elem:expr),*) => {
+    (: $($elem:expr),*) => {
+        vec![$($elem.into()),*]
+    };
+    ($t:ty : $($elem:expr),*) => {
         vec![$($t::from($elem)),*]
     };
-    ($f:ident | $($elem:expr),*) => {
+    ($f:ident : $($elem:expr),*) => {
         vec![$($f($elem)),*]
     };
 }
 
 #[macro_export]
 /// Map a function over elements of [] and collect.
-/// By default, .into() is applied.
-/// To specify the mapping, a function or type followed by `|` can precede the elements.
-/// The pure prefix | is shorthand for ToString::to_string.
+/// By default, .to_string() is applied.
+/// To specify the mapping, a function or type followed by `:` can precede the elements.
+/// The pure prefix `:` is shorthand for Into::into.
 macro_rules! collect_ {
     ($($elem:expr),* $(,)?) => {
-        [$($elem.into()),*].into_iter().collect()
-    };
-    (| $($elem:expr),*) => {
         [$($elem.to_string()),*].into_iter().collect()
     };
-    ($t:ty | $($elem:expr),*) => {
+    (: $($elem:expr),*) => {
+        [$($elem.into()),*].into_iter().collect()
+    };
+    ($t:ty : $($elem:expr),*) => {
         [$($t::from($elem)),*].into_iter().collect()
     };
-    ($f:ident | $($elem:expr),*) => {
+    ($f:ident : $($elem:expr),*) => {
         [$($f($elem)),*].into_iter().collect()
     };
 }

@@ -5,6 +5,7 @@ pub use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
 mod table;
 pub use table::TableBuilder;
+pub mod split;
 
 #[ext(StrExt)]
 impl str {
