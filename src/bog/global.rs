@@ -333,7 +333,7 @@ pub fn init_bogger(fg: bool, output_stderr: bool) {
     }
 }
 
-/// Initialize the global log filter based on a numeric verbosity level.
+/// Initialize the global log filter based on a numeric verbosity level. [`init_bogger`] must be called beforehand.
 ///
 /// The verbosity value maps to a minimum [`BogLevel`] that will be emitted:
 ///

@@ -269,7 +269,18 @@ pub impl<T> T {
         self
     }
 
-    fn cmp_exc<'a, E>(&'a mut self, expected: E, new: T) -> bool
+    /// # Example
+    ///
+    /// ```rust
+    /// use cli_boilerplate_automation::bait::TransformExt;
+    ///
+    /// let v = 0usize;
+    /// if !v.cmp_exch(0, 1) {
+    ///     unreachable!();
+    /// }
+    /// assert_eq!(v, 1);
+    ///```
+    fn cmp_exch<'a, E>(&'a mut self, expected: E, new: T) -> bool
     where
         &'a mut T: PartialEq<E>,
     {

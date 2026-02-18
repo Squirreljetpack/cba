@@ -18,11 +18,11 @@ pub mod level_filter {
     /// Logging filter level.
     /// # Example
     /// ```rust,ignore
-    ///    /// Reduce the level of verbosity (the min level is -qq).
+    ///    /// Reduce the verbosity level (min: -qq).
     ///    #[clap(short, conflicts_with("verbose"), action = ArgAction::Count)]
     ///    quiet: u8,
     ///
-    ///    /// Increase the level of verbosity (the max level is -vvv).
+    ///    /// Increase the verbosity level (max: -vvv).
     ///    #[clap(short, conflicts_with("quiet"), action = ArgAction::Count)]
     ///    verbose: u8,
     /// ```

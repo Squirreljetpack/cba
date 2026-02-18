@@ -1,3 +1,7 @@
+## [0.0.11] - 2026-02-18
+- update split_parsing function
+- doc fixes
+
 ## [0.0.10] - 2026-02-16
 - See commit log
 
