@@ -34,41 +34,10 @@ let x = try()
 	._wbog() // pretty print the warning and consume the error
 ```
 
-There is also a flexible `unwrap!` macro, which can be slightly more convenient than `let/else`. It unwraps Result and Option, or otherwise calls `return`/`continue` for a never type.
-
-```rust
-// Unwrap Option or return Default::default()
-pub fn check_should_template(path: &Path) -> bool {
-	let err_prefix = format!("Failed to read {path:?} for templating");
-	let file = unwrap!(fs::File::open(path).prefix(&err_prefix)._ebog());
-
-	// process file
-
-	true
-}
-
-// A closure in the second argument unwraps Result:
-for binname in list {
-	let Action {
-		name,
-		alias,
-		..
-	} = unwrap!(
-    	binname.parse();
-    	|e| { err_count += 1; ebog!("Scan"; "Failed to parse filename of {}: {e}", path.to_string_lossy()) };
-    	continue
-	);
-
-	println!("{name}");
-}
-
-// (This macro also supports a few other sensible input patterns).
-```
-
 ### Bath/Bo/Broc/Bs
 
 Simple wrappers around standard library modules (`path, io, process, fs`) for more ergonomic usage.
-A few of these operations take the liberty of logging (or bogging) errors instead of propogating them, downgrading them to Option or bool.
+A few of these operations take the liberty of wrappping errors into StringErrors which can be directly printed. Rarely, the errors are logged (or bogged) instead of propogated them, downgrading the return type to Option or bool.
 
 ### Macros
 
@@ -115,5 +84,5 @@ err_count += curr
 
 ## Optional features
 
-- text: text utilities (string padding, table formatting, etc.)
+- text: text utilities (string padding, table formatting, string splitting, etc.)
 - serde: serde derivations on some types, and some serde utils
