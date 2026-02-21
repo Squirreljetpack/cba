@@ -53,7 +53,7 @@ define_transparent_wrapper!(
 	Count: u16 = 1
 );
 
-// Define a collection wrapper with a new function and many standard traits such as IntoIterator/Deref/etc. implemented.
+// Define a collection wrapper with a new function and many standard traits (such as IntoIterator and DerefMut) pre-implemented.
 define_collection_wrapper!(
     #[derive(Debug, serde::Serialize, serde::Deserialize)]
     #[serde(transparent)]
@@ -72,8 +72,6 @@ define_collection_wrapper!(
   - Mutex: `_lock` (ignore poisoning)
   - Transform: Blanket impl of some post-fix methods. These are sometimes nice to use particularly with the builder pattern.
 - initialization helpers
-
-For example:
 
 ```rust
 // transform elements

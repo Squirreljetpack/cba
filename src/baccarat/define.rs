@@ -14,17 +14,19 @@
 /// );
 /// ```
 macro_rules! define_transparent_wrapper {
-    ($(#[$meta:meta])* $name:ident: $(#[$inner_meta:meta])* $inner:path = $default:expr) => {
+    ($(#[$meta:meta])* $name:ident: $(#[$inner_meta:meta])* $inner:path $(= $default:expr)?) => {
         $(#[$meta])*
         #[derive(Debug, PartialEq, serde::Serialize, serde::Deserialize)]
         #[serde(transparent)]
         pub struct $name($(#[$inner_meta])* pub $inner);
 
-        impl Default for $name {
-            fn default() -> Self {
-                $name($default)
+        $(
+            impl Default for $name {
+                fn default() -> Self {
+                    $name($default)
+                }
             }
-        }
+        )?
 
         // Conversions
         impl From<$name> for $inner {
@@ -83,7 +85,7 @@ macro_rules! define_transparent_wrapper {
 ///
 /// ```
 macro_rules! define_restricted_wrapper {
-    ($(#[$meta:meta])* $name:ident: $(#[$inner_meta:meta])* $inner:path = $default:expr) => {
+    ($(#[$meta:meta])* $name:ident: $(#[$inner_meta:meta])* $inner:path $(= $default:expr)?) => {
         $(#[$meta])*
         #[derive(Debug, PartialEq, serde::Serialize)]
         #[serde(transparent)]
@@ -95,11 +97,13 @@ macro_rules! define_restricted_wrapper {
             }
         }
 
-        impl Default for $name {
-            fn default() -> Self {
-                $name($default)
+        $(
+            impl Default for $name {
+                fn default() -> Self {
+                    $name($default)
+                }
             }
-        }
+        )?
 
         impl From<$name> for $inner {
             fn from(c: $name) -> Self {
@@ -203,157 +207,46 @@ macro_rules! define_collection_wrapper {
     };
 }
 
-// ------------- DEBUG -------------
-
-/// dbg but only in debug builds
+// would be kinda neat if rust supported pub ident: value, and value defines the type as well as sets the default.
 #[macro_export]
-macro_rules! _dbg {
-    ($($val:expr),+ $(,)?) => {{
-        #[cfg(debug_assertions)]
-        {
-            $(dbg!(&$val);)+
-        }
-    }};
-    ($($args:tt)*) => {{
-        #[cfg(debug_assertions)]
-        {
-            dbg!($($args)*)
-        }
-    }};
-}
-
-/// Prints to stderr like `eprintln!` but only in debug builds
-#[macro_export]
-macro_rules! _eprint {
-    ($($args:tt)*) => {
-        #[cfg(debug_assertions)]
-        {
-            eprintln!($($args)*);
-        }
-    };
-}
-
-#[macro_export]
-/// Info log in debug
-macro_rules! _log {
-    ($($arg:tt)*) => {
-        #[cfg(debug_assertions)]
-        {
-            log::info!($($arg)*);
-        }
-    };
-}
-
-// -------------------------------
-
-#[macro_export]
-/// Map a function over the elements of a vec![].
-/// By default, .to_string() is applied.
-/// To specify the mapping, a function or type followed by `|` can precede the elements.
-/// The pure prefix `:` is shorthand for Into::into.
-macro_rules! vec_ {
-    ($($elem:expr),* $(,)?) => {
-        vec![$($elem.to_string()),*]
-    };
-    (: $($elem:expr),*) => {
-        vec![$($elem.into()),*]
-    };
-    ($t:ty : $($elem:expr),*) => {
-        vec![$($t::from($elem)),*]
-    };
-    ($f:ident : $($elem:expr),*) => {
-        vec![$($f($elem)),*]
-    };
-}
-
-#[macro_export]
-/// Map a function over elements of [] and collect.
-/// By default, .to_string() is applied.
-/// To specify the mapping, a function or type followed by `:` can precede the elements.
-/// The pure prefix `:` is shorthand for Into::into.
-macro_rules! collect_ {
-    ($($elem:expr),* $(,)?) => {
-        [$($elem.to_string()),*].into_iter().collect()
-    };
-    (: $($elem:expr),*) => {
-        [$($elem.into()),*].into_iter().collect()
-    };
-    ($t:ty : $($elem:expr),*) => {
-        [$($t::from($elem)),*].into_iter().collect()
-    };
-    ($f:ident : $($elem:expr),*) => {
-        [$($f($elem)),*].into_iter().collect()
-    };
-}
-
-#[macro_export]
-/// Write newline-delimited strings directly to stdout without dynamic dispatch.
-///
-/// # Note
-/// The `;` delimiter inserts new-lines, while `,` does not.
-/// A trailing newline is always added.
-macro_rules! prints {
-    // write to custom buffer
-    ($( $( $s:expr ),+ );* => $buf:expr) => {{
-        use std::io::Write;
-        $(
+macro_rules! define_const_default {
+    (
+        $(#[$meta:meta])*
+        $vis:vis struct $Name:ident {
             $(
-                let _ = $buf.write_all($s.as_bytes());
-            )+
-            let _ = $buf.write_all(b"\n");
-        )*
-    }};
-
-    // default: stdout
-    ( $( $( $s:expr ),+ );* ) => {{
-        use std::io::{self, Write};
-        let mut out = io::stdout().lock();
-
-        $(
+                $(#[$field_meta:meta])*
+                $ivis:vis $field:ident : $ty:ty $(= $default:expr)?
+            ),* $(,)?
+        }
+    ) => {
+        $(#[$meta])*
+        $vis struct $Name {
             $(
-                let _ = out.write_all($s.as_bytes());
-            )+
-            let _ = out.write_all(b"\n");
-        )*
-    }};
-}
+                $(#[$field_meta])*
+                $ivis $field: $ty,
+            )*
+        }
 
-#[macro_export]
-// Easier than format! for concatenating strings
-macro_rules! concat_ {
-    ( $( $x:expr ),* $(,)? ) => {{
-        use std::fmt::Write;
-        let mut s = String::new();
-        $(
-            write!(&mut s, "{}", $x).unwrap();
-        )*
-        s
-    }};
-}
+        impl $Name {
+            pub const DEFAULT: Self = Self {
+                $(
+                    $field: define_const_default!(@default $ty $(, $default)?),
+                )*
+            };
+        }
 
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn writes_to_buffer() {
-        let mut buf = Vec::new();
+        impl Default for $Name {
+            fn default() -> Self {
+                Self::DEFAULT
+            }
+        }
+    };
 
-        prints!(
-            "hello", " world";
-            "line 2";
-            "a", "b", "c" => &mut buf
-        );
+    (@default $ty:ty, $default:expr) => {
+        $default
+    };
 
-        assert_eq!(
-            std::str::from_utf8(&buf).unwrap(),
-            "hello world\nline 2\nabc\n"
-        );
-
-        let mut buf = Vec::new();
-
-        prints!(
-            "hello", " world" => &mut buf
-        );
-
-        assert_eq!(std::str::from_utf8(&buf).unwrap(), "hello world\n");
-    }
+    (@default $ty:ty) => {
+        <$ty>::DEFAULT
+    };
 }

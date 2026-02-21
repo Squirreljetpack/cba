@@ -21,16 +21,18 @@ pub mod bo; // File read/write
 pub mod broc;
 pub mod bs; // Filesystem check/set/read
 
+pub mod baccarat;
 pub mod bait;
 pub mod bother;
-pub mod bum;
-pub mod macros;
+pub mod bum; // macro
 
-#[cfg(feature = "text")]
-pub mod text;
+#[cfg(feature = "bring")]
+pub mod bring;
 
 #[cfg(feature = "serde")]
-pub mod serde;
+pub mod bird;
+#[cfg(feature = "serde")]
+pub use crate::bird as serde;
 
 pub mod bog;
 pub use bog::BOGGER;
