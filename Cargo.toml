@@ -1,6 +1,6 @@
 [package]
 name = "cli_boilerplate_automation"
-version = "0.0.11"
+version = "0.0.16"
 edition = "2024"
 description = "Cli Boilerplate Automation: Opiniated Cli Utilities for Basic Tasks"
 repository = "https://github.com/Squirreljetpack/cba"
@@ -19,5 +19,5 @@ which = "8.0.0"
 anyhow = "1.0.100"
 
 [features]
-text = ["dep:unicode-width"]
+bring = ["dep:unicode-width"] # string
 serde = ["dep:serde"]
