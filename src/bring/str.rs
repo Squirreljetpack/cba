@@ -1,16 +1,9 @@
-use std::fmt::Alignment;
-
 use easy_ext::ext;
+use std::fmt::Alignment;
 pub use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
-
-mod table;
-pub use table::TableBuilder;
-pub mod split;
-
 #[ext(StrExt)]
 impl str {
     /// Pad a string with spaces a specified number of times on the left and right.
-    /// Not unicode aware
     pub fn pad(&self, left_count: usize, right_count: usize) -> String {
         let total_len = left_count + self.len() + right_count;
         let mut result = String::with_capacity(total_len);
@@ -119,9 +112,9 @@ impl str {
         }
     }
 
-    /// Works like split_whitespace, but \ keeps tokens together.
+    /// Works like split_whitespace, but \ keeps words together.
     /// # Notes
-    /// '\' escapes any character.
+    /// '\' is only consumed when escaping whitespace.
     pub fn split_escaped_by<F>(&self, is_sep: F) -> impl Iterator<Item = String>
     where
         F: FnMut(char) -> bool,
@@ -167,6 +160,10 @@ where
 
         while let Some(ch) = self.iter.next() {
             if self.escaped {
+                // preserve escapes of non_splitting characters
+                if !(self.is_sep)(ch) {
+                    self.cur.push('\\');
+                }
                 self.cur.push(ch);
                 self.escaped = false;
             } else if ch == '\\' {
@@ -181,6 +178,11 @@ where
         }
 
         self.done = true;
+
+        // preserve escapes of non_splitting characters
+        if self.escaped {
+            self.cur.push('\\');
+        }
 
         if self.cur.is_empty() {
             None
@@ -264,21 +266,6 @@ where
         }
         other => Err(other),
     }
-}
-
-/// Space + underscore as delimiters
-pub fn camel_case(s: String) -> String {
-    s.split(|c: char| c == '_' || c.is_whitespace())
-        .filter(|p| !p.is_empty())
-        .map(|part| {
-            let mut chars = part.chars();
-            match chars.next() {
-                None => String::new(),
-                Some(c) => c.to_ascii_uppercase().to_string() + chars.as_str(),
-            }
-        })
-        .collect::<Vec<_>>()
-        .join("")
 }
 
 #[cfg(test)]

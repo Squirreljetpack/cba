@@ -14,17 +14,19 @@
 /// );
 /// ```
 macro_rules! define_transparent_wrapper {
-    ($(#[$meta:meta])* $name:ident: $(#[$inner_meta:meta])* $inner:path = $default:expr) => {
+    ($(#[$meta:meta])* $name:ident: $(#[$inner_meta:meta])* $inner:path $(= $default:expr)?) => {
         $(#[$meta])*
         #[derive(Debug, PartialEq, serde::Serialize, serde::Deserialize)]
         #[serde(transparent)]
         pub struct $name($(#[$inner_meta])* pub $inner);
 
-        impl Default for $name {
-            fn default() -> Self {
-                $name($default)
+        $(
+            impl Default for $name {
+                fn default() -> Self {
+                    $name($default)
+                }
             }
-        }
+        )?
 
         // Conversions
         impl From<$name> for $inner {
@@ -83,7 +85,7 @@ macro_rules! define_transparent_wrapper {
 ///
 /// ```
 macro_rules! define_restricted_wrapper {
-    ($(#[$meta:meta])* $name:ident: $(#[$inner_meta:meta])* $inner:path = $default:expr) => {
+    ($(#[$meta:meta])* $name:ident: $(#[$inner_meta:meta])* $inner:path $(= $default:expr)?) => {
         $(#[$meta])*
         #[derive(Debug, PartialEq, serde::Serialize)]
         #[serde(transparent)]
@@ -95,11 +97,13 @@ macro_rules! define_restricted_wrapper {
             }
         }
 
-        impl Default for $name {
-            fn default() -> Self {
-                $name($default)
+        $(
+            impl Default for $name {
+                fn default() -> Self {
+                    $name($default)
+                }
             }
-        }
+        )?
 
         impl From<$name> for $inner {
             fn from(c: $name) -> Self {
@@ -203,157 +207,191 @@ macro_rules! define_collection_wrapper {
     };
 }
 
-// ------------- DEBUG -------------
-
-/// dbg but only in debug builds
+// would be kinda neat if rust supported pub ident: value, and value defines the type as well as sets the default.
 #[macro_export]
-macro_rules! _dbg {
-    ($($val:expr),+ $(,)?) => {{
-        #[cfg(debug_assertions)]
-        {
-            $(dbg!(&$val);)+
-        }
-    }};
-    ($($args:tt)*) => {{
-        #[cfg(debug_assertions)]
-        {
-            dbg!($($args)*)
-        }
-    }};
-}
-
-/// Prints to stderr like `eprintln!` but only in debug builds
-#[macro_export]
-macro_rules! _eprint {
-    ($($args:tt)*) => {
-        #[cfg(debug_assertions)]
-        {
-            eprintln!($($args)*);
-        }
-    };
-}
-
-#[macro_export]
-/// Info log in debug
-macro_rules! _log {
-    ($($arg:tt)*) => {
-        #[cfg(debug_assertions)]
-        {
-            log::info!($($arg)*);
-        }
-    };
-}
-
-// -------------------------------
-
-#[macro_export]
-/// Map a function over the elements of a vec![].
-/// By default, .to_string() is applied.
-/// To specify the mapping, a function or type followed by `|` can precede the elements.
-/// The pure prefix `:` is shorthand for Into::into.
-macro_rules! vec_ {
-    ($($elem:expr),* $(,)?) => {
-        vec![$($elem.to_string()),*]
-    };
-    (: $($elem:expr),*) => {
-        vec![$($elem.into()),*]
-    };
-    ($t:ty : $($elem:expr),*) => {
-        vec![$($t::from($elem)),*]
-    };
-    ($f:ident : $($elem:expr),*) => {
-        vec![$($f($elem)),*]
-    };
-}
-
-#[macro_export]
-/// Map a function over elements of [] and collect.
-/// By default, .to_string() is applied.
-/// To specify the mapping, a function or type followed by `:` can precede the elements.
-/// The pure prefix `:` is shorthand for Into::into.
-macro_rules! collect_ {
-    ($($elem:expr),* $(,)?) => {
-        [$($elem.to_string()),*].into_iter().collect()
-    };
-    (: $($elem:expr),*) => {
-        [$($elem.into()),*].into_iter().collect()
-    };
-    ($t:ty : $($elem:expr),*) => {
-        [$($t::from($elem)),*].into_iter().collect()
-    };
-    ($f:ident : $($elem:expr),*) => {
-        [$($f($elem)),*].into_iter().collect()
-    };
-}
-
-#[macro_export]
-/// Write newline-delimited strings directly to stdout without dynamic dispatch.
-///
-/// # Note
-/// The `;` delimiter inserts new-lines, while `,` does not.
-/// A trailing newline is always added.
-macro_rules! prints {
-    // write to custom buffer
-    ($( $( $s:expr ),+ );* => $buf:expr) => {{
-        use std::io::Write;
-        $(
+macro_rules! define_const_default {
+    (
+        $(#[$meta:meta])*
+        $vis:vis struct $Name:ident {
             $(
-                let _ = $buf.write_all($s.as_bytes());
-            )+
-            let _ = $buf.write_all(b"\n");
-        )*
-    }};
-
-    // default: stdout
-    ( $( $( $s:expr ),+ );* ) => {{
-        use std::io::{self, Write};
-        let mut out = io::stdout().lock();
-
-        $(
+                $(#[$field_meta:meta])*
+                $ivis:vis $field:ident : $ty:ty $(= $default:expr)?
+            ),* $(,)?
+        }
+    ) => {
+        $(#[$meta])*
+        $vis struct $Name {
             $(
-                let _ = out.write_all($s.as_bytes());
-            )+
-            let _ = out.write_all(b"\n");
-        )*
-    }};
+                $(#[$field_meta])*
+                $ivis $field: $ty,
+            )*
+        }
+
+        impl $Name {
+            pub const DEFAULT: Self = Self {
+                $(
+                    $field: define_const_default!(@default $ty $(, $default)?),
+                )*
+            };
+        }
+
+        impl Default for $Name {
+            fn default() -> Self {
+                Self::DEFAULT
+            }
+        }
+    };
+
+    (@default $ty:ty, $default:expr) => {
+        $default
+    };
+
+    (@default $ty:ty) => {
+        <$ty>::DEFAULT
+    };
 }
 
 #[macro_export]
-// Easier than format! for concatenating strings
-macro_rules! concat_ {
-    ( $( $x:expr ),* $(,)? ) => {{
-        use std::fmt::Write;
-        let mut s = String::new();
+macro_rules! auto_impl {
+    ($name:ty : $($trait:ident $(=> $target:ty)? $(= $val:expr)?);+ $(;)?) => {
         $(
-            write!(&mut s, "{}", $x).unwrap();
-        )*
-        s
-    }};
-}
+            auto_impl!(@dispatch $name, $trait $(, $target)? $(, $val)?);
+        )+
+    };
 
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn writes_to_buffer() {
-        let mut buf = Vec::new();
+    // ===== dispatch =====
 
-        prints!(
-            "hello", " world";
-            "line 2";
-            "a", "b", "c" => &mut buf
-        );
+    (@dispatch $name:ty, Default, $val:expr) => {
+        impl Default for $name {
+            fn default() -> Self {
+                Self($val)
+            }
+        }
+    };
 
-        assert_eq!(
-            std::str::from_utf8(&buf).unwrap(),
-            "hello world\nline 2\nabc\n"
-        );
+    (@dispatch $name:ty, $trait:ident) => {
+        auto_impl!(@impl $name, $trait, <Self as std::ops::Deref>::Target);
+    };
 
-        let mut buf = Vec::new();
+    // explicit target
+    (@dispatch $name:ty, $trait:ident, $target:ty) => {
+        auto_impl!(@impl $name, $trait, $target);
+    };
 
-        prints!(
-            "hello", " world" => &mut buf
-        );
+    // ===== impls (single inner path) =====
 
-        assert_eq!(std::str::from_utf8(&buf).unwrap(), "hello world\n");
-    }
+    (@impl $name:ty, Deref, $target:ty) => {
+        impl std::ops::Deref for $name {
+            type Target = $target;
+            fn deref(&self) -> &Self::Target {
+                &self.0
+            }
+        }
+    };
+
+    (@impl $name:ty, DerefMut, $target:ty) => {
+        impl std::ops::DerefMut for $name {
+            fn deref_mut(&mut self) -> &mut $target {
+                &mut self.0
+            }
+        }
+    };
+
+    (@impl $name:ty, DerefMut) => {
+        impl std::ops::DerefMut for $name {
+            fn deref_mut(&mut self) -> &mut Self::Target {
+                &mut self.0
+            }
+        }
+    };
+
+
+    (@impl $name:ty, From, $inner:ty) => {
+        impl From<$inner> for $name {
+            fn from(value: $inner) -> Self {
+                Self(value)
+            }
+        }
+    };
+
+    (@impl $name:ty, Into, $inner:ty) => {
+        impl Into<$inner> for $name {
+            fn into(self) -> $inner {
+                self.0
+            }
+        }
+    };
+
+    (@impl $name:ty, Display, $inner:ty) => {
+        impl std::fmt::Display for $name
+        where
+        $inner: std::fmt::Display,
+        {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                std::fmt::Display::fmt(&self.0, f)
+            }
+        }
+    };
+
+    (@impl $name:ty, FromStr, $inner:ty) => {
+        impl std::str::FromStr for $name
+        where
+        $inner: std::str::FromStr,
+        {
+            type Err = <$inner as std::str::FromStr>::Err;
+
+            fn from_str(s: &str) -> Result<Self, Self::Err> {
+                <$inner as std::str::FromStr>::from_str(s).map(Self)
+            }
+        }
+    };
+
+    (@impl $name:ty, IntoIterator, $inner:ty) => {
+        impl IntoIterator for $name
+        where
+        $inner: IntoIterator,
+        {
+            type Item = <$inner as IntoIterator>::Item;
+            type IntoIter = <$inner as IntoIterator>::IntoIter;
+
+            fn into_iter(self) -> Self::IntoIter {
+                self.0.into_iter()
+            }
+        }
+
+        impl<'a> IntoIterator for &'a $name
+        where
+        &'a $inner: IntoIterator,
+        {
+            type Item = <&'a $inner as IntoIterator>::Item;
+            type IntoIter = <&'a $inner as IntoIterator>::IntoIter;
+
+            fn into_iter(self) -> Self::IntoIter {
+                (&self.0).into_iter()
+            }
+        }
+
+        impl<'a> IntoIterator for &'a mut $name
+        where
+        &'a mut $inner: IntoIterator,
+        {
+            type Item = <&'a mut $inner as IntoIterator>::Item;
+            type IntoIter = <&'a mut $inner as IntoIterator>::IntoIter;
+
+            fn into_iter(self) -> Self::IntoIter {
+                (&mut self.0).into_iter()
+            }
+        }
+    };
+
+    (@impl $name:ty, FromIterator, $inner:ty) => {
+        impl<T> std::iter::FromIterator<T> for $name
+        where
+        $inner: std::iter::FromIterator<T>,
+        {
+            fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
+                Self(<$inner as std::iter::FromIterator<T>>::from_iter(iter))
+            }
+        }
+    };
 }

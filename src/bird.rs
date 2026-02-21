@@ -143,7 +143,7 @@ pub mod transform {
     defn_transform!(
         camelcase_normalized,
         deserialize_with_transform,
-        |s: String| crate::text::camel_case(s)
+        |s: String| camel_case(s)
     );
     defn_transform!(
         uppercase_normalized_option,
@@ -153,8 +153,25 @@ pub mod transform {
     defn_transform!(
         camelcase_normalized_option,
         deserialize_option_with_transform => Option<T>,
-        |s: String| crate::text::camel_case(s)
+        |s: String| camel_case(s)
     );
+
+    #[cfg(feature = "bring")]
+    use crate::bring::camel_case;
+    #[cfg(not(feature = "bring"))]
+    pub fn camel_case(s: String) -> String {
+        s.split(|c: char| c == '_' || c.is_whitespace())
+            .filter(|p| !p.is_empty())
+            .map(|part| {
+                let mut chars = part.chars();
+                match chars.next() {
+                    None => String::new(),
+                    Some(c) => c.to_ascii_uppercase().to_string() + chars.as_str(),
+                }
+            })
+            .collect::<Vec<_>>()
+            .join("")
+    }
 }
 
 /// # Caveats

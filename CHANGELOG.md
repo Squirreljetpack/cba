@@ -1,3 +1,10 @@
+## [0.0.16] - 2026-02-21
+- types module now provides definitions by macro
+- define_restricted/transparent defaults are now optional
+- add a define_const_default macro
+- increase `b` count by renaming text -> bring, macros -> baccarat, serde -> bird
+- auto_impl macro for wrappers around field 0
+
 ## [0.0.11] - 2026-02-18
 - update split_parsing function
 - doc fixes
