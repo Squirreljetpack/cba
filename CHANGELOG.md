@@ -1,3 +1,6 @@
+## [0.0.17] - 2026-02-24
+- refactor splitting module
+
 ## [0.0.16] - 2026-02-21
 - types module now provides definitions by macro
 - define_restricted/transparent defaults are now optional
