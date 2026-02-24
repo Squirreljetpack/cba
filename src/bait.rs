@@ -8,20 +8,21 @@ where
     T: Sized,
 {
     /// Merge from maybe by taking.
-    fn take_from(&mut self, maybe: Option<T>) {
+    fn _take(&mut self, maybe: Option<T>) {
         if let Some(v) = maybe {
             *self = v;
         }
     }
 
     /// Merge from maybe by cloning.
-    fn clone_from(&mut self, maybe: &Option<T>)
+    fn _clone(&mut self, maybe: &Option<T>) -> T
     where
         T: Clone,
     {
         if let Some(v) = maybe {
             *self = v.clone();
         }
+        self.clone()
     }
 }
 
@@ -32,6 +33,7 @@ pub impl<T, E> Result<T, E> {
     ///
     /// # Note
     /// Difficult to used with ?, more useful in return statements.
+    #[inline]
     fn cast<F, S>(self) -> Result<S, F>
     where
         F: From<E>,
@@ -44,6 +46,7 @@ pub impl<T, E> Result<T, E> {
     }
 
     /// cast result to StringError.
+    #[inline]
     fn cast_(self) -> Result<T, StringError>
     where
         E: Display,
@@ -56,6 +59,7 @@ pub impl<T, E> Result<T, E> {
 
     // debated between prefix and prefix_err, chose the first because anyhow just calls it context.
     /// Convert Err(e) to the string '{prefix}: {e}'
+    #[inline]
     fn prefix(self, prefix: impl Display) -> Result<T, StringError>
     where
         E: std::fmt::Display,
@@ -73,6 +77,7 @@ pub impl<T, E> Result<T, E> {
     /// # Notes
     /// Can be used in conjunction with [`prefix`](ResultExt::prefix) to add context.
     /// See also: [`crate::bog::BogOkExt`] to bog instead of log.
+    #[inline]
     fn elog(self) -> Result<T, E>
     where
         E: Display,
@@ -88,6 +93,7 @@ pub impl<T, E> Result<T, E> {
     /// # Notes
     /// Can be used in conjunction with [`prefix`](ResultExt::prefix) to add context.
     /// See also: [`crate::bog::BogOkExt`] to bog instead of log.
+    #[inline]
     fn _elog(self) -> Option<T>
     where
         E: Display,
@@ -106,6 +112,7 @@ pub impl<T, E> Result<T, E> {
     /// # Notes
     /// Can be used in conjunction with [`prefix`](ResultExt::prefix) to add context.
     /// See also: [`crate::bog::BogOkExt`] to bog instead of log.
+    #[inline]
     fn wlog(self) -> Result<T, E>
     where
         E: Display,
@@ -121,6 +128,7 @@ pub impl<T, E> Result<T, E> {
     /// # Notes
     /// Can be used in conjunction with [`prefix`](ResultExt::prefix) to add context.
     /// See also: [`crate::bog::BogOkExt`] to bog instead of log.
+    #[inline]
     fn _wlog(self) -> Option<T>
     where
         E: Display,
@@ -274,8 +282,8 @@ pub impl<T> T {
     /// ```rust
     /// use cli_boilerplate_automation::bait::TransformExt;
     ///
-    /// let v = 0usize;
-    /// if !v.cmp_exch(0, 1) {
+    /// let mut v = 0usize;
+    /// if !v.cmp_exch(&mut 0, 1) {
     ///     unreachable!();
     /// }
     /// assert_eq!(v, 1);

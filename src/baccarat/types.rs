@@ -3,6 +3,8 @@
 ///
 /// # Example
 /// ```
+/// use cli_boilerplate_automation::define_when;
+///
 /// define_when! {
 ///    #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 ///    #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Default)]
@@ -81,6 +83,7 @@ macro_rules! define_when {
 
                 pub fn is_default(&self) -> bool { matches!(self, $name::$auto) }
                 pub fn is_always(&self) -> bool { matches!(self, $name::$always) }
+                pub fn is_never(&self) -> bool { matches!(self, $name::$never) }
                 pub fn is_none(&self) -> bool { matches!(self, $name::$auto) }
             }
         }
@@ -88,6 +91,8 @@ macro_rules! define_when {
 
 /// Macro to define an `Either` enum with exactly two variants: Left, Right.
 ///```rust
+/// use cli_boilerplate_automation::define_either;
+///
 /// define_either! {
 ///     #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 ///     #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]

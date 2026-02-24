@@ -10,16 +10,15 @@
 /// Returns `Ok(Vec<String>)` on success, or `Err(i32)` on unbalanced delimiters:
 /// - Positive value: number of unmatched opening delimiters remaining at end.
 /// - Negative value: index of the extra closing delimiter encountered.
-pub fn split_nesting(
+pub fn split_whitespace_preserving_nesting(
     input: &str,
-    non_consuming: impl Into<Option<[char; 2]>>,
-    consuming: impl Into<Option<[char; 2]>>,
+    non_consuming: Option<[char; 2]>,
+    consuming: Option<[char; 2]>,
 ) -> Result<Vec<String>, i32> {
     let mut result = Vec::new();
     let mut nesting: i32 = 0;
     let mut token = String::new();
-    let consuming = consuming.into();
-    let [left, right] = non_consuming.into().unwrap_or_else(|| consuming.unwrap());
+    let [left, right] = non_consuming.unwrap_or_else(|| consuming.unwrap());
 
     let mut chars = input.chars().enumerate().peekable();
     let mut in_consuming_delimiter = false;
@@ -119,39 +118,39 @@ mod tests {
     #[test]
     fn test_basic_and_nested_non_consuming_default() {
         let input = "foo (bar baz (qux)) quux";
-        let parsed = split_nesting(input, Some(['(', ')']), None).unwrap();
+        let parsed = split_whitespace_preserving_nesting(input, Some(['(', ')']), None).unwrap();
         assert_eq!(parsed, vec!["foo", "(bar baz (qux))", "quux"]);
     }
 
     #[test]
     fn test_escaped_parentheses() {
         let input = r"foo \(bar baz\) qux";
-        let parsed = split_nesting(input, Some(['(', ')']), None).unwrap();
+        let parsed = split_whitespace_preserving_nesting(input, Some(['(', ')']), None).unwrap();
         assert_eq!(parsed, vec!["foo", "(bar", "baz)", "qux"]);
     }
 
     #[test]
     fn test_outer_parentheses_consuming() {
         let input = "(foo bar)";
-        let parsed = split_nesting(input, None, Some(['(', ')'])).unwrap();
+        let parsed = split_whitespace_preserving_nesting(input, None, Some(['(', ')'])).unwrap();
         assert_eq!(parsed, vec!["foo bar"]);
     }
 
     #[test]
     fn test_outer_with_nested_and_escapes_consuming() {
         let input = r"(foo \(bar) baz (qux\))";
-        let parsed = split_nesting(input, None, Some(['(', ')'])).unwrap();
+        let parsed = split_whitespace_preserving_nesting(input, None, Some(['(', ')'])).unwrap();
         assert_eq!(parsed, vec!["foo (bar", "baz", "qux)"]);
     }
 
     #[test]
     fn test_unbalanced() {
         assert_eq!(
-            split_nesting("foo (bar", Some(['(', ')']), None).unwrap_err(),
+            split_whitespace_preserving_nesting("foo (bar", Some(['(', ')']), None).unwrap_err(),
             1
         );
         assert_eq!(
-            split_nesting("foo )", Some(['(', ')']), None).unwrap_err(),
+            split_whitespace_preserving_nesting("foo )", Some(['(', ')']), None).unwrap_err(),
             -4
         );
     }
@@ -159,7 +158,126 @@ mod tests {
     #[test]
     fn test_mixed_brackets_and_escapes() {
         let input = r"(( )) [one word] [\[]";
-        let parsed = split_nesting(input, Some(['(', ')']), Some(['[', ']'])).unwrap();
+        let parsed =
+            split_whitespace_preserving_nesting(input, Some(['(', ')']), Some(['[', ']'])).unwrap();
         assert_eq!(parsed, vec!["(( ))", "one word", "["]);
+    }
+}
+
+pub fn split_on_nesting(input: &str, brackets: [char; 2]) -> Result<Vec<String>, i32> {
+    let [open, close] = brackets;
+    let mut results = Vec::new();
+    let mut current_chunk = String::new();
+    let mut level = 0;
+    let mut escaped = false;
+
+    for (i, c) in input.chars().enumerate() {
+        if escaped {
+            current_chunk.push(c);
+            escaped = false;
+            continue;
+        }
+
+        if c == '\\' {
+            // Check lookahead for brackets
+            if input[i + c.len_utf8()..].starts_with(open)
+                || input[i + c.len_utf8()..].starts_with(close)
+            {
+                escaped = true;
+                current_chunk.push(c);
+                continue;
+            }
+        }
+
+        if c == open {
+            if level == 0 && !current_chunk.is_empty() {
+                results.push(current_chunk);
+                current_chunk = String::new();
+            }
+            level += 1;
+        } else if c == close {
+            level -= 1;
+            if level < 0 {
+                return Err(-(i as i32));
+            }
+        }
+
+        current_chunk.push(c);
+
+        // Split after pushing the closing bracket if we are back at ground level
+        if c == close && level == 0 && !current_chunk.is_empty() {
+            results.push(current_chunk);
+            current_chunk = String::new();
+        }
+    }
+
+    if level > 0 {
+        return Err(level);
+    }
+
+    if !current_chunk.is_empty() {
+        results.push(current_chunk);
+    }
+
+    Ok(results)
+}
+
+#[cfg(test)]
+mod nesting_tests {
+    use super::*;
+
+    #[test]
+    fn test_basic_nesting() {
+        let input = "a{b}c{d}";
+        let expected = Ok(vec![
+            "a".to_string(),
+            "{b}".to_string(),
+            "c".to_string(),
+            "{d}".to_string(),
+        ]);
+        assert_eq!(split_on_nesting(input, ['{', '}']), expected);
+    }
+
+    #[test]
+    fn test_deep_nesting() {
+        // Should not split inside the nesting
+        let input = "outside{level1{level2}}also_outside";
+        let expected = Ok(vec![
+            "outside".to_string(),
+            "{level1{level2}}".to_string(),
+            "also_outside".to_string(),
+        ]);
+        assert_eq!(split_on_nesting(input, ['{', '}']), expected);
+    }
+
+    #[test]
+    fn test_escaped_brackets() {
+        let input = "a\\{b{c}d";
+        let expected = Ok(vec![
+            "a\\{b".to_string(),
+            "{c}".to_string(),
+            "d".to_string(),
+        ]);
+        assert_eq!(split_on_nesting(input, ['{', '}']), expected);
+    }
+
+    #[test]
+    fn test_unclosed_error() {
+        let input = "a{b{c}";
+        assert_eq!(split_on_nesting(input, ['{', '}']), Err(1));
+    }
+
+    #[test]
+    fn test_negative_index_error() {
+        let input = "a{b}}c";
+        // The second '}' is at index 4
+        assert_eq!(split_on_nesting(input, ['{', '}']), Err(-4));
+    }
+
+    #[test]
+    fn test_start_with_bracket() {
+        let input = "{a}b";
+        let expected = Ok(vec!["{a}".to_string(), "b".to_string()]);
+        assert_eq!(split_on_nesting(input, ['{', '}']), expected);
     }
 }

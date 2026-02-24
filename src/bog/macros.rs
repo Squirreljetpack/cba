@@ -50,7 +50,8 @@ macro_rules! unwrap {
         }
     };
 
-    ($expr:expr; $err:expr) => {
+    // this is a special case, so we use comma
+    ($expr:expr, $err:expr) => {
         match $expr {
             Some(v) => v,
             None => {
@@ -63,7 +64,25 @@ macro_rules! unwrap {
         match $expr {
             Ok(v) => v,
             Err(e) => {
-                return (|$i| $body)(e);
+                return (|$i: String| $body)(e.to_string());
+            }
+        }
+    };
+
+    ($expr:expr; |$i:ident: $ty:ty| $body:expr) => {
+        match $expr {
+            Ok(v) => v,
+            Err(e) => {
+                return (|$i: $ty| $body)(e);
+            }
+        }
+    };
+
+    ($expr:expr; $v:expr) => {
+        match $expr {
+            Some(v) => v,
+            None => {
+                return $v;
             }
         }
     };
