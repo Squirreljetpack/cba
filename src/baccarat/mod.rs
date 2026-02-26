@@ -123,20 +123,23 @@ mod tests {
 
 // ------------- DEBUG -------------
 
-/// dbg but only in debug builds
+/// dbg!/log::debug! and return the value.
+/// v: dbg, but only in debug builds.
+/// v, prefix: log::debug.
 #[macro_export]
 macro_rules! _dbg {
-    ($($val:expr),+ $(,)?) => {{
+    ($s:expr) => {{
+        let val = $s;
         #[cfg(debug_assertions)]
-        {
-            $(dbg!(&$val);)+
-        }
+        let _ = ::std::dbg!(&val);
+        val
     }};
-    ($($args:tt)*) => {{
-        #[cfg(debug_assertions)]
-        {
-            dbg!($($args)*)
-        }
+
+    // Prefix + expression
+    ($prefix:expr, $s:expr) => {{
+        let val = $s;
+        ::log::debug!(concat!("{}: {:?}"), $prefix, &val);
+        val
     }};
 }
 

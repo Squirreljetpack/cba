@@ -342,7 +342,7 @@ pub fn init_bogger(fg: bool, output_stderr: bool) {
 /// - `2` → show `ERROR` and above
 /// - `3` → show `WARN` and above
 /// - `4` → show `INFO` and above
-/// - `5` → show `LWRN` and above
+/// - `5` → show `_WRN`/`_NFO` and above
 /// - `6` → show `DEBUG` and above
 /// - `7` → show all messages
 ///
@@ -361,7 +361,7 @@ pub fn init_filter(verbosity: u8) {
         2 => BogLevel::ERROR,
         3 => BogLevel::WARN,
         4 => BogLevel::INFO,
-        5 => BogLevel::_WRN, // maybe debug should also be at this level
+        5 => BogLevel::_WRN,
         6 => BogLevel::DEBUG,
         _ => BogLevel::___,
     };

@@ -16,8 +16,7 @@
 macro_rules! define_transparent_wrapper {
     ($(#[$meta:meta])* $name:ident: $(#[$inner_meta:meta])* $inner:path $(= $default:expr)?) => {
         $(#[$meta])*
-        #[derive(Debug, PartialEq, serde::Serialize, serde::Deserialize)]
-        #[serde(transparent)]
+        #[derive(Debug, PartialEq)]
         pub struct $name($(#[$inner_meta])* pub $inner);
 
         $(
@@ -37,21 +36,6 @@ macro_rules! define_transparent_wrapper {
         impl From<$inner> for $name {
             fn from(c: $inner) -> Self {
                 Self(c)
-            }
-        }
-
-        // string
-        impl std::str::FromStr for $name {
-            type Err = $crate::StringError;
-
-            fn from_str(s: &str) -> Result<Self, Self::Err> {
-                let inner = s.parse::<$inner>().map_err(|e| e.to_string())?;
-                Ok($name(inner))
-            }
-        }
-        impl std::fmt::Display for $name {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                write!(f, "{}", self.0)
             }
         }
 
@@ -87,8 +71,7 @@ macro_rules! define_transparent_wrapper {
 macro_rules! define_restricted_wrapper {
     ($(#[$meta:meta])* $name:ident: $(#[$inner_meta:meta])* $inner:path $(= $default:expr)?) => {
         $(#[$meta])*
-        #[derive(Debug, PartialEq, serde::Serialize)]
-        #[serde(transparent)]
+        #[derive(Debug, PartialEq)]
         pub struct $name($(#[$inner_meta])* $inner);
 
         impl $name {

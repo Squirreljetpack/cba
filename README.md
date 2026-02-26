@@ -63,7 +63,8 @@ define_collection_wrapper!(
 
 - `vec_!`: map functions over the elements of a `vec![]` call.
 - `prints!`: write elements to stdout or a buffer directly, without dynamic dispatch.
-- ... and a few others
+- `_dbg!`: dbg! if debug_assertions, and return the value. Or if given a prefix, log::debug and return the value.	
+... and a few others
 
 ### Others
 

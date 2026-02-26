@@ -112,6 +112,17 @@ impl str {
         }
     }
 
+    pub fn split_delim(&self, delim: impl Into<Option<char>>) -> [&str; 2] {
+        if let Some(c) = delim.into() {
+            match self.split_once(c) {
+                Some((head, rest)) => [head, rest],
+                None => [self, ""],
+            }
+        } else {
+            [self, ""]
+        }
+    }
+
     /// Works like split_whitespace, but \ keeps words together.
     /// # Notes
     /// '\' is only consumed when escaping whitespace.

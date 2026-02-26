@@ -133,7 +133,7 @@ impl Command {
     /// Spawn command with piped stdout.
     /// Debug logs the command.
     pub fn spawn_piped(&mut self) -> Result<ChildStdout, StringError> {
-        debug!("Spawning piped: {self:?}");
+        trace!("Spawning piped: {self:?}");
 
         match self
             .stdin(Stdio::null())

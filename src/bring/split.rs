@@ -162,6 +162,16 @@ mod tests {
             split_whitespace_preserving_nesting(input, Some(['(', ')']), Some(['[', ']'])).unwrap();
         assert_eq!(parsed, vec!["(( ))", "one word", "["]);
     }
+
+    #[test]
+    fn test_empty_ok() {
+        let input = "";
+        let expected = Ok(vec!["".to_string()]);
+        assert_eq!(
+            split_whitespace_preserving_nesting(input, None, Some(['{', '}'])),
+            expected
+        );
+    }
 }
 
 pub fn split_on_nesting(input: &str, brackets: [char; 2]) -> Result<Vec<String>, i32> {
@@ -279,5 +289,109 @@ mod nesting_tests {
         let input = "{a}b";
         let expected = Ok(vec!["{a}".to_string(), "b".to_string()]);
         assert_eq!(split_on_nesting(input, ['{', '}']), expected);
+    }
+}
+
+/// - Split on whitespace
+/// - maintain within '.
+/// - \ escapes ' only.
+pub fn split_whitespace_preserve_single_quotes(s: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut cur = String::new();
+    let mut chars = s.chars().peekable();
+
+    let mut in_single = false;
+
+    while let Some(c) = chars.next() {
+        match c {
+            '\'' => {
+                in_single = !in_single;
+            }
+            '\\' => {
+                if let Some(next) = chars.next() {
+                    if next != '\'' {
+                        cur.push('\\');
+                    }
+                    cur.push(next);
+                }
+            }
+            c if c.is_whitespace() && !in_single => {
+                if !cur.is_empty() {
+                    out.push(std::mem::take(&mut cur));
+                }
+            }
+            _ => cur.push(c),
+        }
+    }
+
+    if !cur.is_empty() {
+        out.push(cur);
+    }
+
+    out
+}
+
+pub fn join_with_single_quotes(tokens: &[String]) -> String {
+    tokens
+        .iter()
+        .map(|tok| {
+            let needs_quotes = tok.chars().any(|c| c.is_whitespace() || c == '\'');
+
+            let escaped = tok.replace('\'', r"\'");
+
+            if needs_quotes {
+                format!("'{}'", escaped)
+            } else {
+                escaped
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::split_whitespace_preserve_single_quotes;
+
+    #[test]
+    fn splits_basic_whitespace() {
+        let input = "foo bar   baz";
+        let out = split_whitespace_preserve_single_quotes(input);
+        assert_eq!(out, vec!["foo", "bar", "baz"]);
+    }
+
+    #[test]
+    fn keeps_single_quoted_sections_together() {
+        let input = "foo 'bar baz' qux";
+        let out = split_whitespace_preserve_single_quotes(input);
+        assert_eq!(out, vec!["foo", "bar baz", "qux"]);
+    }
+
+    #[test]
+    fn handles_escaped_single_quote_inside_quotes() {
+        let input = r"'it\'s fine' test";
+        let out = split_whitespace_preserve_single_quotes(input);
+        assert_eq!(out, vec!["it's fine", "test"]);
+    }
+
+    #[test]
+    fn handles_escaped_single_quote_outside_quotes() {
+        let input = r"foo \'bar baz";
+        let out = split_whitespace_preserve_single_quotes(input);
+        assert_eq!(out, vec!["foo", "'bar", "baz"]);
+    }
+
+    #[test]
+    fn ignores_empty_segments() {
+        let input = "   'a b'   ";
+        let out = split_whitespace_preserve_single_quotes(input);
+        assert_eq!(out, vec!["a b"]);
+    }
+
+    #[test]
+    fn unmatched_quote_keeps_rest_together() {
+        let input = "foo 'bar baz";
+        let out = split_whitespace_preserve_single_quotes(input);
+        assert_eq!(out, vec!["foo", "bar baz"]);
     }
 }

@@ -300,6 +300,24 @@ pub impl<T> T {
         }
     }
 
+    /// # Example
+    ///
+    /// ```rust
+    /// use cli_boilerplate_automation::bait::TransformExt;
+    ///
+    /// true.modify_if(cfg!(debug_assertions), |x| *dbg!(x));
+    ///```
+    fn cmp_replace(&mut self, new: T) -> bool
+    where
+        T: PartialEq,
+    {
+        let changed = *self != new;
+        if changed {
+            *self = new;
+        }
+        changed
+    }
+
     fn dbg(self) -> Self
     where
         T: std::fmt::Debug,
