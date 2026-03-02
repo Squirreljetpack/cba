@@ -234,62 +234,64 @@ macro_rules! define_const_default {
     };
 }
 
+/// ```
+/// #[derive(Debug)]
+/// pub struct PromptOverlay(InputUI, Rect);
+/// auto_impl!(PromptOverlay => 0: Deref => InputUI; DerefMut);
+/// ```
 #[macro_export]
 macro_rules! auto_impl {
-    ($name:ty : $($trait:ident $(=> $target:ty)? $(= $val:expr)?);+ $(;)?) => {
+    ($name:ident : $($trait:ident $(=> $target:ty)? $(= $val:expr)?);+ $(;)?) => {
         $(
-            auto_impl!(@dispatch $name, $trait $(, $target)? $(, $val)?);
+            auto_impl!(@dispatch $name, 0, $trait $(, $target)? $(, $val)?);
+        )+
+    };
+
+    ($name:ident => $field:tt : $($trait:ident $(=> $target:ty)? $(= $val:expr)?);+ $(;)?) => {
+        $(
+            auto_impl!(@dispatch $name, $field, $trait $(, $target)? $(, $val)?);
         )+
     };
 
     // ===== dispatch =====
 
-    (@dispatch $name:ty, Default, $val:expr) => {
+    (@dispatch $name:ident, $field:tt, Default, $val:expr) => {
         impl Default for $name {
             fn default() -> Self {
-                Self($val)
+                $val
             }
         }
     };
 
-    (@dispatch $name:ty, $trait:ident) => {
-        auto_impl!(@impl $name, $trait, <Self as std::ops::Deref>::Target);
+    (@dispatch $name:ident, $field:tt, $trait:ident) => {
+        auto_impl!(@impl $name, $field, $trait, <Self as std::ops::Deref>::Target);
     };
 
-    // explicit target
-    (@dispatch $name:ty, $trait:ident, $target:ty) => {
-        auto_impl!(@impl $name, $trait, $target);
+    (@dispatch $name:ident, $field:tt, $trait:ident, $target:ty) => {
+        auto_impl!(@impl $name, $field, $trait, $target);
     };
 
-    // ===== impls (single inner path) =====
+    // ===== impls =====
 
-    (@impl $name:ty, Deref, $target:ty) => {
+    (@impl $name:ident, $field:tt, Deref, $target:ty) => {
         impl std::ops::Deref for $name {
             type Target = $target;
+
             fn deref(&self) -> &Self::Target {
-                &self.0
+                &self.$field
             }
         }
     };
 
-    (@impl $name:ty, DerefMut, $target:ty) => {
+    (@impl $name:ident, $field:tt, DerefMut, $target:ty) => {
         impl std::ops::DerefMut for $name {
             fn deref_mut(&mut self) -> &mut $target {
-                &mut self.0
+                &mut self.$field
             }
         }
     };
 
-    (@impl $name:ty, DerefMut) => {
-        impl std::ops::DerefMut for $name {
-            fn deref_mut(&mut self) -> &mut Self::Target {
-                &mut self.0
-            }
-        }
-    };
-
-
-    (@impl $name:ty, From, $inner:ty) => {
+    (@impl $name:ident, $field:tt, From, $inner:ty) => {
         impl From<$inner> for $name {
             fn from(value: $inner) -> Self {
                 Self(value)
@@ -297,26 +299,26 @@ macro_rules! auto_impl {
         }
     };
 
-    (@impl $name:ty, Into, $inner:ty) => {
+    (@impl $name:ident, $field:tt, Into, $inner:ty) => {
         impl Into<$inner> for $name {
             fn into(self) -> $inner {
-                self.0
+                self.$field
             }
         }
     };
 
-    (@impl $name:ty, Display, $inner:ty) => {
+    (@impl $name:ident, $field:tt, Display, $inner:ty) => {
         impl std::fmt::Display for $name
         where
         $inner: std::fmt::Display,
         {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                std::fmt::Display::fmt(&self.0, f)
+                std::fmt::Display::fmt(&self.$field, f)
             }
         }
     };
 
-    (@impl $name:ty, FromStr, $inner:ty) => {
+    (@impl $name:ident, $field:tt, FromStr, $inner:ty) => {
         impl std::str::FromStr for $name
         where
         $inner: std::str::FromStr,
@@ -329,7 +331,7 @@ macro_rules! auto_impl {
         }
     };
 
-    (@impl $name:ty, IntoIterator, $inner:ty) => {
+    (@impl $name:ident, $field:tt, IntoIterator, $inner:ty) => {
         impl IntoIterator for $name
         where
         $inner: IntoIterator,
@@ -338,7 +340,7 @@ macro_rules! auto_impl {
             type IntoIter = <$inner as IntoIterator>::IntoIter;
 
             fn into_iter(self) -> Self::IntoIter {
-                self.0.into_iter()
+                self.$field.into_iter()
             }
         }
 
@@ -350,7 +352,7 @@ macro_rules! auto_impl {
             type IntoIter = <&'a $inner as IntoIterator>::IntoIter;
 
             fn into_iter(self) -> Self::IntoIter {
-                (&self.0).into_iter()
+                (&self.$field).into_iter()
             }
         }
 
@@ -362,12 +364,12 @@ macro_rules! auto_impl {
             type IntoIter = <&'a mut $inner as IntoIterator>::IntoIter;
 
             fn into_iter(self) -> Self::IntoIter {
-                (&mut self.0).into_iter()
+                (&mut self.$field).into_iter()
             }
         }
     };
 
-    (@impl $name:ty, FromIterator, $inner:ty) => {
+    (@impl $name:ident, $field:tt, FromIterator, $inner:ty) => {
         impl<T> std::iter::FromIterator<T> for $name
         where
         $inner: std::iter::FromIterator<T>,
