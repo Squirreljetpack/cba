@@ -130,9 +130,10 @@ mod tests {
 macro_rules! _dbg {
     ($($expr:expr),+ $(,)?) => {{
         $(
-            let __val = $expr;
             #[cfg(debug_assertions)]
-            let _ = ::std::dbg!(&__val);
+            let __val = ::std::dbg!($expr);
+            #[cfg(not(debug_assertions))]
+            let __val = $expr;
         )+
         __val
     }};
@@ -158,7 +159,7 @@ macro_rules! _eprint {
 
 #[macro_export]
 /// Info log in debug
-macro_rules! _log {
+macro_rules! _info {
     ($($arg:tt)*) => {
         #[cfg(debug_assertions)]
         {

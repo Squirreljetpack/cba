@@ -79,6 +79,10 @@ define_collection_wrapper!(
 err_count += curr
 	.update_from_config_path(dir, lib, &name, targets)?
 	.transform(|s| if s == usize::MAX { 0 } else { s });
+
+// modify elements
+config.binds = default_binds().modify(|x| x.extend(config.binds));
+
 ```
 
 ## Optional features
