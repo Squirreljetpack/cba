@@ -1,3 +1,13 @@
+## [0.0.18] - 2026-03-07
+
+### 🚀 Features
+
+- add an option for creating relative symlinks in symlink fn
+
+### 💼 Other
+
+- fix _dbg! displaying the wrong variable
+
 ## [0.0.17] - 2026-02-24
 - refactor splitting module
 
