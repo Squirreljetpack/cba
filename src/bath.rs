@@ -166,6 +166,23 @@ pub impl<T: AsRef<Path>> T {
         }
     }
 }
+
+pub fn shell_quote_impl(s: &str) -> String {
+    if cfg!(windows) {
+        // Windows CMD: wrap in double quotes, escape internal quotes by doubling them
+        // e.g., C:\Path "With" Quotes -> "C:\Path ""With"" Quotes"
+        let escaped = s.replace('"', "\"\"");
+        format!("\"{}\"", escaped)
+    } else if cfg!(unix) {
+        // Unix shells: wrap in single quotes, escape internal single quotes
+        // e.g., /path/it's/here -> '/path/it'\''s/here'
+        let escaped = s.replace('\'', r"'\''");
+        format!("'{}'", escaped)
+    } else {
+        s.to_string()
+    }
+}
+
 // ----------------------
 
 /// Cache the expression into a fn() -> &'static Path

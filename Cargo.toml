@@ -1,6 +1,6 @@
 [package]
 name = "cli_boilerplate_automation"
-version = "0.0.18"
+version = "0.0.19"
 edition = "2024"
 description = "Cli Boilerplate Automation: Opiniated Cli Utilities for Basic Tasks"
 repository = "https://github.com/Squirreljetpack/cba"

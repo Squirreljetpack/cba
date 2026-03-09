@@ -350,7 +350,7 @@ pub fn join_with_single_quotes(tokens: &[String]) -> String {
 }
 
 #[cfg(test)]
-mod tests {
+mod single_quote_tests {
     use super::split_whitespace_preserve_single_quotes;
 
     #[test]
