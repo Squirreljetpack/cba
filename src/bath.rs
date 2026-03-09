@@ -96,7 +96,7 @@ pub impl<T: AsRef<Path>> T {
     /// # Example
     /// ```rust
     /// use std::path::Path;
-    /// use cli_boilerplate_automation::{bog::{BogOkExt, BogUnwrapExt}, bath::PathExt, bait::OptionExt};
+    /// use cba::{bog::{BogOkExt, BogUnwrapExt}, bath::PathExt, bait::OptionExt};
     ///
     /// let path = Path::new("");
     /// path.abs(std::env::current_dir()._ebog().or_exit());

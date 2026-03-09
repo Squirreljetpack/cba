@@ -5,7 +5,7 @@
 ///
 /// Unwrap Option or return Default::default():
 /// ```rust
-/// use cli_boilerplate_automation::unwrap;
+/// use cba::unwrap;
 /// use std::fs::File;
 ///
 /// pub fn check_should_template(path: &std::path::Path) -> bool {

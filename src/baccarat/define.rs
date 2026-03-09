@@ -5,7 +5,7 @@
 ///
 /// # Example
 /// ```rust
-/// use cli_boilerplate_automation::define_transparent_wrapper;
+/// use cba::define_transparent_wrapper;
 ///
 /// #[cfg(feature = "serde")]
 /// define_transparent_wrapper!(
@@ -56,7 +56,7 @@ macro_rules! define_transparent_wrapper {
 ///
 /// # Example
 /// ```rust
-/// use cli_boilerplate_automation::define_restricted_wrapper;
+/// use cba::define_restricted_wrapper;
 ///
 /// #[cfg(feature = "serde")] {
 ///     define_restricted_wrapper!(Percentage: u16 = 100);
@@ -106,7 +106,7 @@ macro_rules! define_restricted_wrapper {
 /// Implements the Deref, DerefMut, Default and IntoIterator/FromIterator traits and the new function.
 ///
 /// ```rust
-/// use cli_boilerplate_automation::define_collection_wrapper;
+/// use cba::define_collection_wrapper;
 /// pub struct Module {};
 /// define_collection_wrapper!(
 ///     #[cfg_attr(feature = "serde", derive(Debug, serde::Serialize, serde::Deserialize))]
@@ -235,8 +235,14 @@ macro_rules! define_const_default {
 }
 
 /// ```
+/// use cba::auto_impl;
+///
 /// #[derive(Debug)]
-/// pub struct PromptOverlay(InputUI, Rect);
+/// pub struct InputUI {};
+///
+/// #[derive(Debug)]
+/// pub struct PromptOverlay(InputUI, usize);
+///
 /// auto_impl!(PromptOverlay => 0: Deref => InputUI; DerefMut);
 /// ```
 #[macro_export]

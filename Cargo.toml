@@ -1,6 +1,6 @@
 [package]
 name = "cli_boilerplate_automation"
-version = "0.0.19"
+version = "0.0.20"
 edition = "2024"
 description = "Cli Boilerplate Automation: Opiniated Cli Utilities for Basic Tasks"
 repository = "https://github.com/Squirreljetpack/cba"
@@ -21,3 +21,7 @@ anyhow = "1.0.100"
 [features]
 bring = ["dep:unicode-width"] # string
 serde = ["dep:serde"]
+
+[lib]
+  name = "cba"
+  path = "src/lib.rs"

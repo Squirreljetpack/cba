@@ -263,7 +263,7 @@ pub impl<T> T {
     /// # Example
     ///
     /// ```rust
-    /// use cli_boilerplate_automation::bait::TransformExt;
+    /// use cba::bait::TransformExt;
     ///
     /// true.modify_if(cfg!(debug_assertions), |x| *dbg!(x));
     ///```
@@ -280,7 +280,7 @@ pub impl<T> T {
     /// # Example
     ///
     /// ```rust
-    /// use cli_boilerplate_automation::bait::TransformExt;
+    /// use cba::bait::TransformExt;
     ///
     /// let mut v = 0usize;
     /// if !v.cmp_exch(&mut 0, 1) {
@@ -303,7 +303,7 @@ pub impl<T> T {
     /// # Example
     ///
     /// ```rust
-    /// use cli_boilerplate_automation::bait::TransformExt;
+    /// use cba::bait::TransformExt;
     ///
     /// true.modify_if(cfg!(debug_assertions), |x| *dbg!(x));
     ///```

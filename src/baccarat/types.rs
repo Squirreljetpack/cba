@@ -3,7 +3,7 @@
 ///
 /// # Example
 /// ```
-/// use cli_boilerplate_automation::define_when;
+/// use cba::define_when;
 ///
 /// define_when! {
 ///    #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -91,7 +91,7 @@ macro_rules! define_when {
 
 /// Macro to define an `Either` enum with exactly two variants: Left, Right.
 ///```rust
-/// use cli_boilerplate_automation::define_either;
+/// use cba::define_either;
 ///
 /// define_either! {
 ///     #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]

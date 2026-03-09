@@ -181,7 +181,7 @@ pub fn symlink(
 /// Construct a relative path from a provided base directory path to the provided path.
 ///
 /// ```rust
-/// use pathdiff::diff_paths;
+/// use cba::bs::diff_paths;
 /// use std::path::*;
 ///
 /// assert_eq!(diff_paths("/foo/bar",      "/foo/bar/baz"),  Some("../".into()));

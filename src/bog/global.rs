@@ -538,7 +538,7 @@ macro_rules! _ibog {
 
 /// # Example
 /// ```rust
-/// use cli_boilerplate_automation::bog::{BogOkExt, BogUnwrapExt};
+/// use cba::bog::{BogOkExt, BogUnwrapExt};
 ///
 /// fn fallible_result() -> Result<i32, Box<dyn std::error::Error>> {
 ///     Ok(42)
