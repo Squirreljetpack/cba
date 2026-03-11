@@ -149,6 +149,41 @@ impl Command {
         }
     }
 
+    /// Run command and return full stdout as a String.
+    /// If the command exits non-zero, returns an error including exit code and stderr.
+    pub fn read_to_string(&mut self) -> Result<String, StringError> {
+        trace!("Collecting output: {self:?}");
+
+        let output = self
+            .stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .output()
+            .prefix(&format!("Failed to spawn: {}", self.display()))?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+
+            let code = output
+                .status
+                .code()
+                .map_or("None".to_string(), |c| c.to_string());
+
+            return Err(format!(
+                "{} exited with code {}: {}",
+                self.display(),
+                code,
+                stderr.trim()
+            )
+            .into());
+        }
+
+        let stdout = String::from_utf8(output.stdout)
+            .map_err(|_| format!("{} produced non-UTF8 stdout", self.display()))?;
+
+        Ok(stdout)
+    }
+
     /// Naive check of whether a command succeeds. (i.e. health check).
     pub fn success(&mut self) -> bool {
         self.stdout(Stdio::null())

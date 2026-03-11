@@ -1,3 +1,6 @@
+## [0.0.22] - 2026-03-11
+- Command::read_to_string
+
 ## [0.0.21] - 2026-03-11
 - split_on_unescaped_delimiter
 
