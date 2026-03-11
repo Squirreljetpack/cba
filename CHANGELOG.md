@@ -1,3 +1,6 @@
+## [0.0.21] - 2026-03-11
+- split_on_unescaped_delimiter
+
 ## [0.0.20] - 2026-03-09
 - rename lib
 

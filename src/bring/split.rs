@@ -174,6 +174,7 @@ mod tests {
     }
 }
 
+/// Split text on entering and exiting nesting level = 1.
 pub fn split_on_nesting(input: &str, brackets: [char; 2]) -> Result<Vec<String>, i32> {
     let [open, close] = brackets;
     let mut results = Vec::new();
@@ -393,5 +394,53 @@ mod single_quote_tests {
         let input = "foo 'bar baz";
         let out = split_whitespace_preserve_single_quotes(input);
         assert_eq!(out, vec!["foo", "bar baz"]);
+    }
+}
+
+pub fn split_on_unescaped_delimiter(s: &str, delimiter: &str) -> Vec<String> {
+    let mut result = Vec::new();
+    let mut current = String::new();
+    let mut i = 0;
+    let chars: Vec<char> = s.chars().collect();
+    let delim_len = delimiter.len();
+
+    while i < chars.len() {
+        if chars[i] == '\\' {
+            // check if delimiter follows
+            if i + delim_len < chars.len() && &s[i + 1..i + 1 + delim_len] == delimiter {
+                current.push_str(delimiter);
+                i += delim_len + 1;
+                continue;
+            } else {
+                current.push('\\');
+                i += 1;
+                continue;
+            }
+        }
+
+        // check for delimiter
+        if i + delim_len - 1 < chars.len() && &s[i..i + delim_len] == delimiter {
+            result.push(current);
+            current = String::new();
+            i += delim_len;
+        } else {
+            current.push(chars[i]);
+            i += 1;
+        }
+    }
+
+    result.push(current);
+    result
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_split_escaped_string() {
+        let s = r"part1\###still1###part2###part3\###end";
+        let parts = split_on_unescaped_delimiter(s, "###");
+        assert_eq!(parts, ["part1###still1", "part2", "part3###end"]);
     }
 }

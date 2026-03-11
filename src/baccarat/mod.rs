@@ -124,8 +124,8 @@ mod tests {
 // ------------- DEBUG -------------
 
 /// dbg!/log::debug! and return the value.
-/// v: dbg, but only in debug builds.
-/// v, prefix: log::trace!("{prefix}: {:?}")
+/// - expr: dbg, but only in debug builds.
+/// - prefix, expr: log::trace!("{prefix}: {:?}")
 #[macro_export]
 macro_rules! _dbg {
     ($($expr:expr),+ $(,)?) => {{
@@ -138,7 +138,6 @@ macro_rules! _dbg {
         __val
     }};
 
-    // Prefix + expression
     ($prefix:expr; $s:expr) => {{
         let val = $s;
         ::log::trace!(concat!("{}: {:?}"), $prefix, &val);
