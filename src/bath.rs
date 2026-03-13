@@ -1,6 +1,7 @@
 //! Path manipulation
 
 use crate::StringError;
+use crate::bait::ResultExt;
 use std::path::{Component, Path, PathBuf};
 
 /// Split path around last '.'
@@ -18,6 +19,17 @@ pub fn root_dir() -> PathBuf {
 
 #[easy_ext::ext(PathExt)]
 pub impl<T: AsRef<Path>> T {
+    /// Convert to str, or provide useful error.
+    fn filename(&self) -> Result<&str, StringError> {
+        let path = self.as_ref();
+
+        let err_prefix = format!("Failed to determine basename of {path:?}");
+        path.file_name()
+            .ok_or(StringError(err_prefix.clone()))?
+            .to_str()
+            .ok_or(StringError(err_prefix))
+    }
+
     /// Get the owned (lossy) basename of a valid path (for display purposes).
     /// Returns the original if path has no filename.
     fn basename(&self) -> String {
@@ -27,31 +39,6 @@ pub impl<T: AsRef<Path>> T {
             None => path.to_string_lossy(),
         }
         .to_string()
-    }
-
-    /// Get the (lossy) basename of a valid path.
-    /// Returns empty string + log::warn! if path has no filename.
-    fn filename(&self) -> Cow<'_, str> {
-        let path = self.as_ref();
-
-        match path.file_name() {
-            Some(s) => s.to_string_lossy(),
-            None => {
-                log::warn!("Failed to determine basename of {path:?}");
-                "".into()
-            }
-        }
-    }
-
-    /// Convert to str, or provide useful error.
-    fn _filename(&self) -> Result<&str, StringError> {
-        let path = self.as_ref();
-
-        let err_prefix = format!("Failed to determine basename of {path:?}");
-        path.file_name()
-            .ok_or(StringError(err_prefix.clone()))?
-            .to_str()
-            .ok_or(StringError(err_prefix))
     }
 
     fn display_short(&self, home_dir: &Path) -> String {
@@ -295,7 +282,7 @@ pub fn auto_dest_for_src(
             }
 
             let parent = initial_dest.parent().unwrap_or(&initial_dest);
-            let s = initial_dest.filename();
+            let s = initial_dest.filename()._elog().unwrap_or_default();
             let [stem, ext] = split_ext(&s);
 
             for i in 1usize.. {

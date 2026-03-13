@@ -1,3 +1,6 @@
+## [0.0.23] - 2026-03-13
+- renamed _filename -> filename and removed filename in PathExt
+
 ## [0.0.22] - 2026-03-11
 - Command::read_to_string
 
