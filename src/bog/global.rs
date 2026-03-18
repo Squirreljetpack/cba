@@ -321,9 +321,9 @@ impl BOGGER {
 // ----------- INITIALIZATION -------------
 pub fn init_bogger(fg: bool, output_stderr: bool) {
     let writer: Box<dyn Write + Send + Sync> = if output_stderr {
-        Box::new(stderr())
+        Box::new(anstream::AutoStream::auto(stderr()))
     } else {
-        Box::new(stdout())
+        Box::new(anstream::AutoStream::auto(stdout()))
     };
 
     if fg {

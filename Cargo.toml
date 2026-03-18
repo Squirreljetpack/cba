@@ -17,6 +17,8 @@ unicode-width = { version = "0.1", optional = true }
 serde = { version = "1.0", features = ["derive"], optional = true }
 which = "8.0.0"
 anyhow = "1.0.100"
+anstyle = "1.0"
+anstream = "0.6"
 
 [features]
 bring = ["dep:unicode-width"] # string

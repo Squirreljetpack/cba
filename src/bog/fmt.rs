@@ -64,17 +64,24 @@ pub trait BogFmter {
 pub struct Fg {}
 impl BogFmter for Fg {
     fn tag(&self, level: BogLevel, tag: &str) -> String {
-        let (code, lvl) = match level {
-            BogLevel::NOTE => ("34", "NOTE"),                  // blue
-            BogLevel::ERROR => ("31", "ERRO"),                 // red
-            BogLevel::WARN | BogLevel::_WRN => ("33", "WARN"), // yellow
-            BogLevel::INFO | BogLevel::_NFO => ("32", "INFO"), // green
-            BogLevel::DEBUG => ("35", "DBUG"),                 // magenta
-            BogLevel::EMPTY => ("30", ""),                     // black
-            BogLevel::___ => ("", ""),                         // unreachable
-            BogLevel::CUSTOM(s) => ("34", s),                  // blue
+        use anstyle::{AnsiColor, Style};
+
+        let (style, lvl) = match level {
+            BogLevel::NOTE => (Style::new().fg_color(Some(AnsiColor::Blue.into())), "NOTE"),
+            BogLevel::ERROR => (Style::new().fg_color(Some(AnsiColor::Red.into())), "ERRO"),
+            BogLevel::WARN | BogLevel::_WRN => {
+                (Style::new().fg_color(Some(AnsiColor::Yellow.into())), "WARN")
+            }
+            BogLevel::INFO | BogLevel::_NFO => {
+                (Style::new().fg_color(Some(AnsiColor::Green.into())), "INFO")
+            }
+            BogLevel::DEBUG => (Style::new().fg_color(Some(AnsiColor::Magenta.into())), "DBUG"),
+            BogLevel::EMPTY => (Style::new().fg_color(Some(AnsiColor::Black.into())), ""),
+            BogLevel::___ => (Style::new(), ""),
+            BogLevel::CUSTOM(s) => (Style::new().fg_color(Some(AnsiColor::Blue.into())), s),
         };
-        let mut s = format!("\x1b[{code}m[{lvl}");
+
+        let mut s = format!("{style}[{lvl}");
         if !tag.is_empty() {
             s.push_str(": ");
             s.push_str(tag);
@@ -82,7 +89,8 @@ impl BogFmter for Fg {
             s.push_str(tag);
         };
 
-        s.push_str("]\x1b[0m");
+        s.push_str("]");
+        s.push_str(&style.render_reset().to_string());
         s
     }
 }
@@ -90,25 +98,63 @@ impl BogFmter for Fg {
 pub struct Bg {}
 impl BogFmter for Bg {
     fn tag(&self, level: BogLevel, tag: &str) -> String {
-        let (code, lvl) = match level {
-            BogLevel::NOTE => ("44", "NOTE "),                  // blue
-            BogLevel::ERROR => ("41", "ERROR"),                 // red
-            BogLevel::WARN | BogLevel::_WRN => ("43", "WARN "), // yellow
-            BogLevel::INFO | BogLevel::_NFO => ("42", "INFO "), // green
-            BogLevel::DEBUG => ("45", "DEBUG"),                 // purple
-            BogLevel::EMPTY => ("47", ""),                      // white
-            BogLevel::___ => ("", ""),                          // unreachable
-            BogLevel::CUSTOM(s) => ("44", s),                   // blue
+        use anstyle::{AnsiColor, Style};
+
+        let (style, lvl) = match level {
+            BogLevel::NOTE => (
+                Style::new()
+                    .fg_color(Some(AnsiColor::Black.into()))
+                    .bg_color(Some(AnsiColor::Blue.into())),
+                "NOTE ",
+            ),
+            BogLevel::ERROR => (
+                Style::new()
+                    .fg_color(Some(AnsiColor::Black.into()))
+                    .bg_color(Some(AnsiColor::Red.into())),
+                "ERROR",
+            ),
+            BogLevel::WARN | BogLevel::_WRN => (
+                Style::new()
+                    .fg_color(Some(AnsiColor::Black.into()))
+                    .bg_color(Some(AnsiColor::Yellow.into())),
+                "WARN ",
+            ),
+            BogLevel::INFO | BogLevel::_NFO => (
+                Style::new()
+                    .fg_color(Some(AnsiColor::Black.into()))
+                    .bg_color(Some(AnsiColor::Green.into())),
+                "INFO ",
+            ),
+            BogLevel::DEBUG => (
+                Style::new()
+                    .fg_color(Some(AnsiColor::Black.into()))
+                    .bg_color(Some(AnsiColor::Magenta.into())),
+                "DEBUG",
+            ),
+            BogLevel::EMPTY => (
+                Style::new()
+                    .fg_color(Some(AnsiColor::Black.into()))
+                    .bg_color(Some(AnsiColor::White.into())),
+                "",
+            ),
+            BogLevel::___ => (Style::new(), ""),
+            BogLevel::CUSTOM(s) => (
+                Style::new()
+                    .fg_color(Some(AnsiColor::Black.into()))
+                    .bg_color(Some(AnsiColor::Blue.into())),
+                s,
+            ),
         };
 
-        let mut start = format!("\x1b[30;{code}m{lvl}"); // colored bg with black text (white also looks bad/worse)
+        let mut start = format!("{style}{lvl}");
         if !tag.is_empty() {
             start.push_str("| ");
             start.push_str(tag);
         } else if matches!(level, BogLevel::EMPTY) {
             start.push_str(tag);
         };
-        start.push_str(" \x1b[0m");
+        start.push_str(" ");
+        start.push_str(&style.render_reset().to_string());
 
         start
     }

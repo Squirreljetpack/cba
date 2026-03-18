@@ -154,6 +154,29 @@ pub impl<T: AsRef<Path>> T {
     }
 }
 
+pub fn __root() -> Option<PathBuf> {
+    let cwd = std::env::current_dir().ok()?;
+
+    let mut root = PathBuf::new();
+
+    for c in cwd.components() {
+        match c {
+            Component::Prefix(p) => root.push(p.as_os_str()),
+            Component::RootDir => {
+                root.push(c.as_os_str());
+                return Some(root);
+            }
+            _ => break,
+        }
+    }
+
+    if root.as_os_str().is_empty() {
+        None
+    } else {
+        Some(root)
+    }
+}
+
 pub fn shell_quote_impl(s: &str) -> String {
     if cfg!(windows) {
         // Windows CMD: wrap in double quotes, escape internal quotes by doubling them
