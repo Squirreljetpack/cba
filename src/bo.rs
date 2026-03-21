@@ -79,6 +79,22 @@ pub fn load_type_or_default<T: Default, E: std::fmt::Display>(
     }
 }
 
+/// [`load_type_or_default`] but log instead of bog
+pub fn load_type_or_default_log<T: Default, E: std::fmt::Display>(
+    path: impl AsRef<Path>,
+    str_loader: impl Fn(&str) -> Result<T, E>,
+) -> T {
+    let path = path.as_ref();
+    if path.is_file() {
+        load_type(path, &str_loader)
+            .prefix("Using default config due to errors")
+            ._wlog()
+            .unwrap_or_else(T::default)
+    } else {
+        T::default()
+    }
+}
+
 /// Write string to file, creating parent directories as needed.
 pub fn write_str(path: &Path, contents: &str) -> io::Result<()> {
     if let Some(p) = path.parent() {

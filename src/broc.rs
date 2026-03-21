@@ -130,13 +130,12 @@ impl Command {
         self.spawn().prefix(&ep)._ebog()
     }
 
-    /// Spawn command with piped stdout.
+    /// Spawn command with piped stdout and null stderr.
     /// Debug logs the command.
     pub fn spawn_piped(&mut self) -> Result<ChildStdout, StringError> {
         trace!("Spawning piped: {self:?}");
 
         match self
-            .stdin(Stdio::null())
             .stdout(Stdio::piped())
             .stderr(Stdio::null())
             .spawn()

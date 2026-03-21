@@ -112,7 +112,7 @@ pub fn split_whitespace_preserving_nesting(
 }
 
 #[cfg(test)]
-mod tests {
+mod whitespace_nesting_tests {
     use super::*;
 
     #[test]
@@ -434,7 +434,7 @@ pub fn split_on_unescaped_delimiter(s: &str, delimiter: &str) -> Vec<String> {
 }
 
 #[cfg(test)]
-mod tests {
+mod delimiter_tests {
     use super::*;
 
     #[test]
