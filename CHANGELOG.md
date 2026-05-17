@@ -1,3 +1,10 @@
+## [0.1.1] - 2026-05-17
+
+### 🚀 Features
+
+- Load_type_or_default_log, spawn_piped no longer silences stdin
+- Improved shell quoting and detection on windows
+
 ## [0.1.0] - 2026-03-18
 
 ### 🚀 Features

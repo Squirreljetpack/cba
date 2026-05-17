@@ -26,13 +26,15 @@ impl Child {
 impl Command {
     /// Use [`SHELL`] to create a command from a shell script
     /// On unix, the empty string is given to $0 so that subsequent args are fed to the script directly.
-    /// On windows (todo)
     pub fn from_script(script: &str) -> Self {
         let (shell, arg) = &*SHELL;
 
         let mut ret = Command::new(shell);
 
+        #[cfg(unix)]
         ret.arg(arg).arg(script).arg(""); // the first argument is the program name which we leave empty
+        #[cfg(not(unix))]
+        ret.arg(arg).arg(script);
 
         ret
     }
@@ -292,21 +294,29 @@ pub fn display_sh_prog_and_args(prog: impl AsRef<OsStr>, args: &[impl AsRef<OsSt
 pub static SHELL: LazyLock<(String, String)> = LazyLock::new(|| {
     #[cfg(windows)]
     {
-        let path = env::var("COMSPEC").unwrap_or_else(|_| "cmd.exe".to_string());
+        // PSModulePath is the most reliable indicator that we are in a PowerShell-configured environment
+        if env::var("PSModulePath").is_ok() {
+            // 1. Distribution channel is the official marker
+            // 2. pwsh usually sets execution policy env vars or specific versioning
+            let is_core = env::var("POWERSHELL_DISTRIBUTION_CHANNEL").is_ok()
+                || env::var("PSExecutionPolicyPreference").is_ok();
 
-        let lower = path.to_lowercase();
-        let flag = if lower.contains("powershell") || lower.contains("pwsh") {
-            "-Command".to_string()
+            let exe = if is_core {
+                "pwsh.exe"
+            } else {
+                "powershell.exe"
+            };
+            (exe.to_string(), "-Command".to_string())
         } else {
-            "/C".to_string()
-        };
-        (path, flag)
+            // Fallback to COMSPEC for CMD
+            let path = env::var("COMSPEC").unwrap_or_else(|_| "cmd.exe".to_string());
+            (path, "/C".to_string())
+        }
     }
     #[cfg(unix)]
     {
         let path = env::var("SHELL").unwrap_or_else(|_| "/bin/sh".to_string());
         let flag = "-c".to_string();
-        log::debug!("SHELL: {}, {}", path, flag);
         (path, flag)
     }
 });

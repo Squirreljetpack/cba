@@ -133,16 +133,33 @@ pub impl<T: AsRef<Path>> T {
 
     /// Quotes the path.
     /// Returns None if not Windows or Unix or not UTF-8.
+    /// Uses a generally correct method for quoting in cmd.exe on windows. For pwsh, see [`shell_quote_impl`].
     fn shell_quote(&self) -> Option<String> {
         let Some(s) = self.as_ref().to_str() else {
             return None;
         };
 
         if cfg!(windows) {
-            // Windows CMD: wrap in double quotes, escape internal quotes by doubling them
-            // e.g., C:\Path "With" Quotes -> "C:\Path ""With"" Quotes"
-            let escaped = s.replace('"', "\"\"");
-            Some(format!("\"{}\"", escaped))
+            let mut quoted = String::new();
+            quoted.push('"');
+
+            for c in s.chars() {
+                match c {
+                    '"' => quoted.push_str(r#""""#),
+
+                    '&' | '|' | '<' | '>' | '^' => {
+                        quoted.push('^');
+                        quoted.push(c);
+                    }
+
+                    '%' => quoted.push_str("%%"),
+
+                    _ => quoted.push(c),
+                }
+            }
+
+            quoted.push('"');
+            Some(quoted)
         } else if cfg!(unix) {
             // Unix shells: wrap in single quotes, escape internal single quotes
             // e.g., /path/it's/here -> '/path/it'\''s/here'
@@ -177,12 +194,13 @@ pub fn __root() -> Option<PathBuf> {
     }
 }
 
+/// Assumes powershell for windows
 pub fn shell_quote_impl(s: &str) -> String {
     if cfg!(windows) {
-        // Windows CMD: wrap in double quotes, escape internal quotes by doubling them
-        // e.g., C:\Path "With" Quotes -> "C:\Path ""With"" Quotes"
-        let escaped = s.replace('"', "\"\"");
-        format!("\"{}\"", escaped)
+        // PowerShell: wrap in single quotes, escape internal single quotes by doubling them.
+        // e.g., C:\Path's "With" Space -> 'C:\Path''s "With" Space'
+        let escaped = s.replace('\'', "''");
+        format!("'{}'", escaped)
     } else if cfg!(unix) {
         // Unix shells: wrap in single quotes, escape internal single quotes
         // e.g., /path/it's/here -> '/path/it'\''s/here'
@@ -191,6 +209,44 @@ pub fn shell_quote_impl(s: &str) -> String {
     } else {
         s.to_string()
     }
+}
+
+pub fn cmd_quote(s: &str) -> String {
+    if !s.contains(' ') && !s.contains('"') && !s.contains('\t') {
+        return s.to_string();
+    }
+
+    let mut out = String::with_capacity(s.len() + 2);
+    out.push('"');
+
+    let mut backslashes = 0;
+
+    for c in s.chars() {
+        match c {
+            '\\' => {
+                backslashes += 1;
+            }
+            '"' => {
+                out.push_str(&"\\".repeat(backslashes * 2 + 1));
+                out.push('"');
+                backslashes = 0;
+            }
+            _ => {
+                if backslashes > 0 {
+                    out.push_str(&"\\".repeat(backslashes));
+                    backslashes = 0;
+                }
+                out.push(c);
+            }
+        }
+    }
+
+    if backslashes > 0 {
+        out.push_str(&"\\".repeat(backslashes * 2));
+    }
+
+    out.push('"');
+    out
 }
 
 // ----------------------
