@@ -14,7 +14,7 @@ pub fn dump_type<'a, T, E: Error>(
     input: &'a T,
     string_maker: impl FnOnce(&'a T) -> Result<String, E>,
 ) -> Result<(), StringError> {
-    let path = path.as_ref().with_extension("toml");
+    let path = path.as_ref();
     let type_name = std::any::type_name::<T>().rsplit("::").next().unwrap();
     let error_prefix = format!("Failed to save {type_name} to {}", path.to_string_lossy());
 
@@ -27,7 +27,7 @@ pub fn load_type<T, E: std::fmt::Display>(
     path: impl AsRef<Path>,
     str_loader: impl FnOnce(&str) -> Result<T, E>, // pass a closure here if u need to satisfy hrtb
 ) -> Result<T, StringError> {
-    let path = path.as_ref().with_extension("toml");
+    let path = path.as_ref();
     let type_name = std::any::type_name::<T>().rsplit("::").next().unwrap();
     let error_prefix = format!("Failed to load {type_name} from {}", path.to_string_lossy());
 

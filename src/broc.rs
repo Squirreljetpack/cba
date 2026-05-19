@@ -387,7 +387,7 @@ pub type EnvVars = Vec<(String, String)>;
 macro_rules! env_vars {
     ($( $name:expr => $value:expr ),* $(,)?) => {
         Vec::<(String, String)>::from([
-            $( ($name.into(), $value.into()) ),*
+            $( ($name.into(), $value.to_string()) ),*
             ]
         )
     };
