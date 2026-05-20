@@ -1,3 +1,9 @@
+## [0.1.2] - 2026-05-20
+
+### 🐛 Bug Fixes
+
+- Load_type no longer autoappends .toml ext
+
 ## [0.1.1] - 2026-05-17
 
 ### 🚀 Features
