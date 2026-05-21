@@ -1,3 +1,9 @@
+## [0.2.0] - 2026-05-21
+
+### 🚀 Features
+
+- Add get, set methods to envvars
+
 ## [0.1.2] - 2026-05-20
 
 ### 🐛 Bug Fixes
