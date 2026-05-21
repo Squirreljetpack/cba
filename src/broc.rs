@@ -1,6 +1,6 @@
 //! Utilities for (spawning) processes
 
-use crate::{StringError, bait::ResultExt, bog::BogOkExt, ebog};
+use crate::{StringError, bait::ResultExt, bog::BogOkExt, define_collection_wrapper, ebog};
 use cfg_if::cfg_if;
 use log::{debug, trace};
 use std::{
@@ -381,14 +381,36 @@ pub fn has(name: &str) -> bool {
 }
 
 // ENV VARS
-pub type EnvVars = Vec<(String, String)>;
+define_collection_wrapper!(
+    #[cfg_attr(feature = "serde", derive(Debug, serde::Serialize, serde::Deserialize, Clone, PartialEq))]
+    EnvVars: Vec<(String, String)>
+);
 
 #[macro_export]
 macro_rules! env_vars {
     ($( $name:expr => $value:expr ),* $(,)?) => {
-        Vec::<(String, String)>::from([
+        $crate::broc::EnvVars::from(vec![
             $( ($name.into(), $value.to_string()) ),*
-            ]
-        )
+        ])
     };
+
+}
+impl EnvVars {
+    pub fn set(&mut self, key: impl Into<String>, value: impl ToString) {
+        let key = key.into();
+        if let Some((_, v)) = self.0.iter_mut().find(|(k, _)| k == &key) {
+            *v = value.to_string();
+        } else {
+            self.0.push((key, value.to_string()));
+        }
+    }
+
+    pub fn get(&self, key: impl AsRef<str>) -> Option<&str> {
+        let key = key.as_ref();
+
+        self.0
+            .iter()
+            .find(|(k, _)| k == key)
+            .map(|(_, v)| v.as_str())
+    }
 }
