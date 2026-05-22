@@ -37,7 +37,7 @@ let x = try()
 ### Bath/Bo/Broc/Bs
 
 Simple wrappers around standard library modules (`path, io, process, fs`) for more ergonomic usage.
-A few of these operations take the liberty of wrappping errors into StringErrors which can be directly printed. Rarely, the errors are logged (or bogged) instead of propogated them, downgrading the return type to Option or bool.
+A few of these operations take the liberty of wrappping errors into StringErrors which can be directly printed. Rarely, the errors are logged (or bogged) instead of propogated, downgrading the return type to Option or bool.
 
 ### Macros
 
@@ -64,7 +64,7 @@ define_collection_wrapper!(
 - `vec_!`: map functions over the elements of a `vec![]` call.
 - `prints!`: write elements to stdout or a buffer directly, without dynamic dispatch.
 - `_dbg!`: dbg! if debug_assertions, and return the value. Or if given a prefix, log::debug and return the value.	
-... and a few others
+- ... and a couple more
 
 ### Others
 

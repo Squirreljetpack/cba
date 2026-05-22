@@ -107,7 +107,54 @@ impl str {
             }
 
             Alignment::Center => {
-                unimplemented!("unimplemented");
+                let total_width: usize = self.chars().map(|c| c.width().unwrap_or(0)).sum();
+                if total_width <= max {
+                    return self.to_string();
+                }
+
+                let ellipsis_width = 1;
+                if max < ellipsis_width {
+                    return String::new();
+                }
+
+                let mut left_chars = Vec::new();
+                let mut right_chars = Vec::new();
+
+                let mut chars_iter = self.chars();
+                let mut used_width = ellipsis_width;
+
+                // Alternatingly pull from the front and back
+                loop {
+                    if let Some(l_ch) = chars_iter.next() {
+                        let l_width = l_ch.width().unwrap_or(0);
+                        if used_width + l_width <= max {
+                            left_chars.push(l_ch);
+                            used_width += l_width;
+                        } else {
+                            break;
+                        }
+                    } else {
+                        break;
+                    }
+
+                    if let Some(r_ch) = chars_iter.next_back() {
+                        let r_width = r_ch.width().unwrap_or(0);
+                        if used_width + r_width <= max {
+                            right_chars.push(r_ch);
+                            used_width += r_width;
+                        } else {
+                            break;
+                        }
+                    } else {
+                        break;
+                    }
+                }
+
+                let mut result = String::new();
+                result.extend(left_chars);
+                result.push('…');
+                result.extend(right_chars.into_iter().rev());
+                result
             }
         }
     }

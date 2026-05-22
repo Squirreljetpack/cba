@@ -347,6 +347,15 @@ pub fn init_bogger(fg: bool, output_stderr: bool) {
 /// - `7` → show all messages
 ///
 /// Note that the ordering is dependant on the default implementation of [`BogFmter::priority`]. If overridden in a non-compatible way, we recommended calling [`BOGGER::filter_below`] directly to avoid confusion.
+///
+/// # Example
+/// ```
+/// use cba::bog;
+///
+/// pub fn init_logger([q, v]: [u8; 2], log_path: &std::path::Path) {
+///   bog::init_filter((4 + v).saturating_sub(q));
+/// }
+/// ```
 pub fn init_filter(verbosity: u8) {
     let level = match verbosity {
         0 => {
