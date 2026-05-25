@@ -1,3 +1,9 @@
+## [0.3.0] - 2026-05-25
+
+### 🚀 Features
+
+- Middle truncation for ellipsize
+
 ## [0.2.0] - 2026-05-21
 
 ### 🚀 Features
