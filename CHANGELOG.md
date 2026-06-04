@@ -1,3 +1,10 @@
+## [0.4.0] - 2026-06-04
+
+### 🚀 Features
+
+- Spawn_piped returns Child with Stdout
+- change generic bool for parameter in map_reader functions
+
 ## [0.3.0] - 2026-05-25
 
 ### 🚀 Features
