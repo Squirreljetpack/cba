@@ -137,12 +137,13 @@ pub fn read_to_chunks<R: Read>(reader: R, delim: char) -> std::io::Split<std::io
 ///     f: impl FnMut(String) -> Result<(), E> + SSS,
 ///     input_separator: Option<char>,
 ///     abort_empty: Option<RenderSender<NullActionExt>>,
+///     skip_invalid: bool
 /// ) -> tokio::task::JoinHandle<Result<usize, MapReaderError<E>>> {
 ///     tokio::task::spawn_blocking(move || {
 ///         let ret = if let Some(delim) = input_separator {
-///             map_chunks::<true, E>(read_to_chunks(reader, delim), f).elog()
+///             map_chunks::<E>(read_to_chunks(reader, delim, skip_invalid), f).elog()
 ///         } else {
-///             map_reader_lines::<true, E>(reader, f).elog()
+///             map_reader_lines::<E>(reader, f, skip_invalid).elog()
 ///         };
 ///
 ///         if let Some(render_tx) = abort_empty
@@ -154,9 +155,10 @@ pub fn read_to_chunks<R: Read>(reader: R, delim: char) -> std::io::Split<std::io
 ///     })
 /// }
 /// ```
-pub fn map_chunks<const INVALID_FAIL: bool, E>(
+pub fn map_chunks<E>(
     iter: impl Iterator<Item = std::io::Result<Vec<u8>>>,
     mut f: impl FnMut(String) -> Result<(), E>,
+    skip_invalid: bool,
 ) -> Result<usize, MapReaderError<E>> {
     let mut count = 0;
     for (i, chunk_result) in iter.enumerate() {
@@ -177,7 +179,7 @@ pub fn map_chunks<const INVALID_FAIL: bool, E>(
                     e
                 );
                 // Skip but continue reading
-                if INVALID_FAIL {
+                if !skip_invalid {
                     return Err(MapReaderError::ChunkError(i, std::io::Error::other(err)));
                 } else {
                     continue;
@@ -190,9 +192,10 @@ pub fn map_chunks<const INVALID_FAIL: bool, E>(
 
 /// Map each line read from reader to a string, passing to f.
 /// Logs read errors.
-pub fn map_reader_lines<const INVALID_FAIL: bool, E>(
+pub fn map_reader_lines<E>(
     reader: impl Read,
     mut f: impl FnMut(String) -> Result<(), E>,
+    skip_invalid: bool,
 ) -> Result<usize, MapReaderError<E>> {
     let buf_reader = io::BufReader::new(reader);
     let mut count = 0;
@@ -207,7 +210,7 @@ pub fn map_reader_lines<const INVALID_FAIL: bool, E>(
                 }
             }
             Err(e) => {
-                if INVALID_FAIL {
+                if !skip_invalid {
                     return Err(MapReaderError::ChunkError(i, e));
                 } else {
                     continue;

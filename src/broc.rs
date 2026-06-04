@@ -7,7 +7,7 @@ use std::{
     env,
     ffi::{OsStr, OsString},
     path::Path,
-    process::{Child, ChildStdout, Command, Stdio, exit},
+    process::{Child, Command, Stdio, exit},
     sync::LazyLock,
 };
 
@@ -134,19 +134,21 @@ impl Command {
 
     /// Spawn command with piped stdout and null stderr.
     /// Debug logs the command.
-    pub fn spawn_piped(&mut self) -> Result<ChildStdout, StringError> {
+    pub fn spawn_piped(
+        &mut self,
+    ) -> Result<(std::process::Child, std::process::ChildStdout), StringError> {
         trace!("Spawning piped: {self:?}");
 
-        match self
+        let mut child = self
             .stdout(Stdio::piped())
             .stderr(Stdio::null())
             .spawn()
-            .prefix(&format!("Failed to spawn: {}", self.display()))?
-            .stdout
-            .take()
-        {
-            Some(s) => Ok(s),
-            None => Err(format!("No stdout for {}.", self.display()).into()), // stdout failure has no reason suffix
+            .prefix(&format!("Failed to spawn: {}", self.display()))?;
+
+        match child.stdout.take() {
+            Some(stdout) => Ok((child, stdout)),
+
+            None => Err(format!("No stdout for {}.", self.display()).into()),
         }
     }
 
