@@ -13,10 +13,6 @@ pub fn split_ext(p: &str) -> [&str; 2] {
     }
 }
 
-pub fn root_dir() -> PathBuf {
-    PathBuf::from(std::path::MAIN_SEPARATOR_STR)
-}
-
 #[easy_ext::ext(PathExt)]
 pub impl<T: AsRef<Path>> T {
     /// Convert to str, or provide useful error.
@@ -171,7 +167,11 @@ pub impl<T: AsRef<Path>> T {
     }
 }
 
-pub fn __root() -> Option<PathBuf> {
+/// Find the root the current directory resides on
+/// ```
+/// root: PathBuf = find_root().unwrap_or(PathBuf::from(std::path::MAIN_SEPARATOR_STR));
+/// ```
+pub fn find_root() -> Option<PathBuf> {
     let cwd = std::env::current_dir().ok()?;
 
     let mut root = PathBuf::new();

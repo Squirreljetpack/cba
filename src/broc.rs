@@ -7,7 +7,7 @@ use std::{
     env,
     ffi::{OsStr, OsString},
     path::Path,
-    process::{Child, Command, Stdio, exit},
+    process::{Child, ChildStdout, Command, Stdio, exit},
     sync::LazyLock,
 };
 
@@ -134,9 +134,7 @@ impl Command {
 
     /// Spawn command with piped stdout and null stderr.
     /// Debug logs the command.
-    pub fn spawn_piped(
-        &mut self,
-    ) -> Result<(std::process::Child, std::process::ChildStdout), StringError> {
+    pub fn spawn_piped(&mut self) -> Result<(Child, ChildStdout), StringError> {
         trace!("Spawning piped: {self:?}");
 
         let mut child = self
@@ -323,45 +321,37 @@ pub static SHELL: LazyLock<(String, String)> = LazyLock::new(|| {
     }
 });
 
-/// # Note
-/// AI generated cuz i dunno windows, seems fine?
+/// lowercase filename of [`SHELL`]
 pub fn current_shell() -> String {
-    #[cfg(unix)]
-    {
-        if let Ok(shell) = env::var("SHELL") {
-            if let Some(name) = Path::new(&shell).file_name().and_then(|n| n.to_str()) {
-                return name.to_ascii_lowercase();
-            }
-        }
+    if let Some(name) = Path::new(&SHELL.0).file_name().and_then(|n| n.to_str()) {
+        return name.to_ascii_lowercase();
     }
-
-    #[cfg(windows)]
-    {
-        // Prefer modern PowerShell if present
-        if let Ok(ps) = env::var("PSModulePath") {
-            if !ps.is_empty() {
-                return "pwsh".into();
-            }
-        }
-
-        if let Ok(comspec) = env::var("COMSPEC") {
-            if let Some(name) = Path::new(&comspec).file_name().and_then(|n| n.to_str()) {
-                return name.to_ascii_lowercase();
-            }
-        }
-    }
-
     String::new()
 }
 
+pub static TTY_HANDLE: LazyLock<Option<std::fs::File>> = LazyLock::new(|| {
+    std::fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open("/dev/tty")
+        .map_err(|e| {
+            log::error!("Failed to open global /dev/tty: {e}");
+            e
+        })
+        .ok()
+});
+
+/// Returns a single interactive Stdio handle cloned from the global TTY cache.
+/// Falls back to inheriting standard streams if /dev/tty is unavailable.
 pub fn tty_or_inherit() -> Stdio {
-    if let Ok(mut tty) = std::fs::File::open("/dev/tty") {
-        let _ = std::io::Write::flush(&mut tty); // does nothing but seems logical
-        Stdio::from(tty)
-    } else {
-        log::error!("Failed to open /dev/tty");
-        Stdio::inherit()
+    if let Some(tty_file) = &*TTY_HANDLE {
+        if let Ok(tty_clone) = tty_file.try_clone() {
+            return Stdio::from(tty_clone);
+        }
+        log::error!("Failed to clone cached /dev/tty file descriptor");
     }
+
+    Stdio::inherit()
 }
 
 use std::{cell::RefCell, collections::HashMap};

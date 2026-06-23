@@ -124,6 +124,7 @@ pub fn read_to_chunks<R: Read>(reader: R, delim: char) -> std::io::Split<std::io
 }
 
 // note: stream means wrapping with closure passed stream::unfold and returning f() inside
+// skip_invalid could be mut skip_invalid: Option<impl FnMut(Vec<u8>)>, if we use str::from_utf8 but that makes skip_invalid into handle_invalid Some(|| {}) which is a bit more annoying
 
 /// Map each chunk read from reader to a string, passing to f.
 /// Logs chunk reading errors.
