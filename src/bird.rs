@@ -69,6 +69,38 @@ pub mod through_string {
     }
 }
 
+pub mod empty_string_as_none {
+    use serde::{Deserialize, Deserializer, Serialize, Serializer, de::IntoDeserializer};
+
+    pub fn serialize<T, S>(value: &Option<T>, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        T: Serialize,
+        S: Serializer,
+    {
+        match value {
+            Some(value) => value.serialize(serializer),
+
+            None => serializer.serialize_str(""),
+        }
+    }
+
+    pub fn deserialize<'de, D, T>(deserializer: D) -> Result<Option<T>, D::Error>
+    where
+        D: Deserializer<'de>,
+        T: Deserialize<'de>,
+    {
+        let s = Option::<String>::deserialize(deserializer)?;
+
+        match s {
+            None => Ok(None),
+
+            Some(s) if s.is_empty() => Ok(None),
+
+            Some(s) => T::deserialize(s.into_deserializer()).map(Some),
+        }
+    }
+}
+
 pub mod transform {
     pub use super::*;
 

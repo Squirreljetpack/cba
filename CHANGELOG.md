@@ -1,3 +1,10 @@
+## [0.5.0] - 2026-07-03
+
+### 🚀 Features
+
+- Singleton tty
+- empty string -> None
+
 ## [0.4.0] - 2026-06-04
 
 ### 🚀 Features
