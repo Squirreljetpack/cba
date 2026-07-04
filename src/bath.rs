@@ -126,50 +126,14 @@ pub impl<T: AsRef<Path>> T {
 
         ret
     }
-
-    /// Quotes the path.
-    /// Returns None if not Windows or Unix or not UTF-8.
-    /// Uses a generally correct method for quoting in cmd.exe on windows. For pwsh, see [`shell_quote_impl`].
-    fn shell_quote(&self) -> Option<String> {
-        let Some(s) = self.as_ref().to_str() else {
-            return None;
-        };
-
-        if cfg!(windows) {
-            let mut quoted = String::new();
-            quoted.push('"');
-
-            for c in s.chars() {
-                match c {
-                    '"' => quoted.push_str(r#""""#),
-
-                    '&' | '|' | '<' | '>' | '^' => {
-                        quoted.push('^');
-                        quoted.push(c);
-                    }
-
-                    '%' => quoted.push_str("%%"),
-
-                    _ => quoted.push(c),
-                }
-            }
-
-            quoted.push('"');
-            Some(quoted)
-        } else if cfg!(unix) {
-            // Unix shells: wrap in single quotes, escape internal single quotes
-            // e.g., /path/it's/here -> '/path/it'\''s/here'
-            let escaped = s.replace('\'', r"'\''");
-            Some(format!("'{}'", escaped))
-        } else {
-            None
-        }
-    }
 }
 
 /// Find the root the current directory resides on
 /// ```
-/// root: PathBuf = find_root().unwrap_or(PathBuf::from(std::path::MAIN_SEPARATOR_STR));
+/// use std::path::PathBuf;
+/// use cba::bath::find_root;
+///
+/// let root: PathBuf = find_root().unwrap_or(PathBuf::from(std::path::MAIN_SEPARATOR_STR));
 /// ```
 pub fn find_root() -> Option<PathBuf> {
     let cwd = std::env::current_dir().ok()?;
@@ -192,61 +156,6 @@ pub fn find_root() -> Option<PathBuf> {
     } else {
         Some(root)
     }
-}
-
-/// Assumes powershell for windows
-pub fn shell_quote_impl(s: &str) -> String {
-    if cfg!(windows) {
-        // PowerShell: wrap in single quotes, escape internal single quotes by doubling them.
-        // e.g., C:\Path's "With" Space -> 'C:\Path''s "With" Space'
-        let escaped = s.replace('\'', "''");
-        format!("'{}'", escaped)
-    } else if cfg!(unix) {
-        // Unix shells: wrap in single quotes, escape internal single quotes
-        // e.g., /path/it's/here -> '/path/it'\''s/here'
-        let escaped = s.replace('\'', r"'\''");
-        format!("'{}'", escaped)
-    } else {
-        s.to_string()
-    }
-}
-
-pub fn cmd_quote(s: &str) -> String {
-    if !s.contains(' ') && !s.contains('"') && !s.contains('\t') {
-        return s.to_string();
-    }
-
-    let mut out = String::with_capacity(s.len() + 2);
-    out.push('"');
-
-    let mut backslashes = 0;
-
-    for c in s.chars() {
-        match c {
-            '\\' => {
-                backslashes += 1;
-            }
-            '"' => {
-                out.push_str(&"\\".repeat(backslashes * 2 + 1));
-                out.push('"');
-                backslashes = 0;
-            }
-            _ => {
-                if backslashes > 0 {
-                    out.push_str(&"\\".repeat(backslashes));
-                    backslashes = 0;
-                }
-                out.push(c);
-            }
-        }
-    }
-
-    if backslashes > 0 {
-        out.push_str(&"\\".repeat(backslashes * 2));
-    }
-
-    out.push('"');
-    out
 }
 
 // ----------------------

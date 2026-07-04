@@ -235,9 +235,68 @@ impl Command {
     }
 }
 
+/// Quotes a argument for placement inside a string submitted to a shell.
+/// Returns None if and only if not valid UTF-8.
+/// Supports POSIX, pwsh, and cmd.exe.
+///
+/// ```rust,ignore
+/// use std::process::Command;
+/// use cba::broc::shell_quote;
+///
+/// let dangerous_input = "Tom & Jerry %PATH%";
+/// let escaped_cmd_str = shell_quote(dangerous_input).unwrap();
+/// let output = Command::new("cmd")
+///    .arg("/c")
+///    .arg(format!("echo {}", escaped_cmd_str))
+///    .output()
+///    .expect("failed to execute process");
+/// ```
+pub fn shell_quote(s: impl AsRef<OsStr>) -> Option<String> {
+    s.as_ref().to_str().map(shell_quote_impl)
+}
+
+fn shell_quote_impl(s: &str) -> String {
+    if cfg!(windows) {
+        if &SHELL.0 == "cmd.exe" {
+            let mut quoted = String::new();
+            quoted.push('"');
+
+            for c in s.chars() {
+                match c {
+                    '"' => quoted.push_str(r#""""#),
+
+                    '&' | '|' | '<' | '>' | '^' => {
+                        quoted.push('^');
+                        quoted.push(c);
+                    }
+
+                    '%' => quoted.push_str("%%"),
+
+                    _ => quoted.push(c),
+                }
+            }
+
+            quoted.push('"');
+            quoted.into()
+        } else {
+            // PowerShell: wrap in single quotes, escape internal single quotes by doubling them.
+            // e.g., C:\Path's "With" Space -> 'C:\Path''s "With" Space'
+            let escaped = s.replace('\'', "''");
+            format!("'{}'", escaped).into()
+        }
+    } else if cfg!(unix) {
+        // Unix shells: wrap in single quotes, escape internal single quotes
+        // e.g., /path/it's/here -> '/path/it'\''s/here'
+        let escaped = s.replace('\'', r"'\''");
+        format!("'{}'", escaped).into()
+    } else {
+        s.into()
+    }
+}
+
 /// Join arguments into a single string
 /// Non-UTF-8 arguments are not escaped
-/// Todo: support windows
+/// cmd.exe is not supported
 pub fn format_sh_command(inputs: &[impl AsRef<OsStr>], double: bool) -> OsString {
     let mut cmd = OsString::new();
     let mut first = true;
@@ -251,6 +310,7 @@ pub fn format_sh_command(inputs: &[impl AsRef<OsStr>], double: bool) -> OsString
         let os = arg.as_ref();
 
         match os.to_str() {
+            #[cfg(not(target_os = "windows"))]
             Some(s) => {
                 if double {
                     let escaped = s
@@ -267,8 +327,20 @@ pub fn format_sh_command(inputs: &[impl AsRef<OsStr>], double: bool) -> OsString
                     cmd.push("'");
                 }
             }
+            #[cfg(not(target_os = "windows"))]
             None => {
                 // no shell-escape if not valid UTF-8 since there is no safe way to do it.
+                cmd.push(os);
+            }
+            #[cfg(target_os = "windows")]
+            Some(s) if &SHELL.0 != "cmd.exe" => {
+                let escaped = s.replace('\'', "''");
+                cmd.push("'");
+                cmd.push(escaped);
+                cmd.push("'");
+            }
+            #[cfg(target_os = "windows")]
+            _ => {
                 cmd.push(os);
             }
         }
