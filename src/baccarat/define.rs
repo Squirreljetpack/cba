@@ -69,10 +69,16 @@ macro_rules! define_transparent_wrapper {
 ///
 /// ```
 macro_rules! define_restricted_wrapper {
-    ($(#[$meta:meta])* $name:ident: $(#[$inner_meta:meta])* $inner:path $(= $default:expr)?) => {
+    (
+        $(#[$meta:meta])*
+        $name:ident:
+        $(#[$inner_meta:meta])*
+        $inner:path $(= $default:expr)?
+        $(, $(#[$field_meta:meta])* $field_vis:vis $field:ident: $ty:ty )* $(,)?
+    ) => {
         $(#[$meta])*
         #[derive(Debug, PartialEq)]
-        pub struct $name($(#[$inner_meta])* $inner);
+        pub struct $name($(#[$inner_meta])* $inner $( $(#[$field_meta])* $field_vis $field: $ty,)*);
 
         impl $name {
             pub fn inner(&self) -> $inner {
@@ -104,6 +110,7 @@ macro_rules! define_restricted_wrapper {
 #[macro_export]
 /// Implement a wrapper around a container type (i.e. HashMap).
 /// Implements the Deref, DerefMut, Default and IntoIterator/FromIterator traits and the new function.
+/// Wrapped content is accessible from inner field.
 ///
 /// ```rust
 /// use cba::define_collection_wrapper;
@@ -114,13 +121,40 @@ macro_rules! define_restricted_wrapper {
 /// );
 /// ```
 macro_rules! define_collection_wrapper {
-    ($(#[$meta:meta])* $name:ident: $(#[$inner_meta:meta])* $inner:path) => {
+    (
+        $(#[$meta:meta])*
+        $name:ident:
+        $(#[$inner_meta:meta])*
+        $inner:path
+        $(, $(#[$field_meta:meta])* $field_vis:vis $field:ident: $ty:ty )* $(,)?
+    ) => {
         $(#[$meta])*
-        pub struct $name($(#[$inner_meta])* $inner);
+        pub struct $name { // 1. Use `{}` for named fields
+            $(#[$inner_meta])*
+            pub inner: $inner, // Give the wrapped path a field name
+            $(
+                $(#[$field_meta])*
+                $field_vis $field: $ty,
+            )*
+        }
 
         impl $name {
             pub fn new() -> Self {
-                Self(<$inner>::new())
+                $name {
+                    inner: <$inner>::new(),
+                    $(
+                        $field: Default::default(),
+                    )*
+                }
+            }
+
+            pub fn new_from(inner: $inner) -> Self {
+                $name {
+                    inner,
+                    $(
+                        $field: Default::default(),
+                    )*
+                }
             }
         }
 
@@ -128,30 +162,30 @@ macro_rules! define_collection_wrapper {
             type Target = $inner;
 
             fn deref(&self) -> &Self::Target {
-                &self.0
+                &self.inner
             }
         }
 
         impl std::ops::DerefMut for $name {
             fn deref_mut(&mut self) -> &mut Self::Target {
-                &mut self.0
+                &mut self.inner
             }
         }
 
         impl Default for $name {
             fn default() -> Self {
-                Self(<$inner>::new())
+                Self::new()
             }
         }
 
         impl From<$name> for $inner {
             fn from(c: $name) -> Self {
-                c.0
+                c.inner
             }
         }
         impl From<$inner> for $name {
             fn from(c: $inner) -> Self {
-                Self(c)
+                Self::new_from(c)
             }
         }
 
@@ -160,7 +194,7 @@ macro_rules! define_collection_wrapper {
             type IntoIter = <$inner as IntoIterator>::IntoIter;
 
             fn into_iter(self) -> Self::IntoIter {
-                self.0.into_iter()
+                self.inner.into_iter()
             }
         }
 
@@ -169,7 +203,7 @@ macro_rules! define_collection_wrapper {
             type IntoIter = <&'a $inner as IntoIterator>::IntoIter;
 
             fn into_iter(self) -> Self::IntoIter {
-                (&self.0).into_iter()
+                (&self.inner).into_iter()
             }
         }
 
@@ -184,7 +218,7 @@ macro_rules! define_collection_wrapper {
 
         impl FromIterator<<$inner as IntoIterator>::Item> for $name {
             fn from_iter<I: IntoIterator<Item = <$inner as IntoIterator>::Item>>(iter: I) -> Self {
-                Self(iter.into_iter().collect())
+                Self::new_from(iter.into_iter().collect())
             }
         }
     };

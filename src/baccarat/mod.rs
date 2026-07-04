@@ -128,7 +128,7 @@ mod tests {
 /// - prefix, expr: log::trace!("{prefix}: {:?}")
 #[macro_export]
 macro_rules! _dbg {
-    ($($expr:expr),+ $(,)?) => {{
+    ($($expr:expr);+ $(;)?) => {{
         $(
             #[cfg(debug_assertions)]
             let __val = ::std::dbg!($expr);
@@ -138,10 +138,40 @@ macro_rules! _dbg {
         __val
     }};
 
-    ($prefix:expr; $s:expr) => {{
+    ($prefix:expr, $s:expr) => {{
         let val = $s;
         ::log::trace!(concat!("{}: {:?}"), $prefix, &val);
         val
+    }};
+}
+
+#[macro_export]
+macro_rules! _info {
+    (@munch ($($format:expr),*) ($($values:expr),*) $label:literal , $expr:expr ; $($tail:tt)*) => {
+        $crate::_info!(@munch ($($format,)* "\n", $label, " = {:?}") ($($values,)* $expr) $($tail)*)
+    };
+    
+    (@munch ($($format:expr),*) ($($values:expr),*) $label:literal : $expr:expr ; $($tail:tt)*) => {
+        $crate::_info!(@munch ($($format,)* "\n", $label, " = {:?}") ($($values,)* $expr) $($tail)*)
+    };
+
+    (@munch ($($format:expr),*) ($($values:expr),*) $msg:literal ; $($tail:tt)*) => {
+        $crate::_info!(@munch ($($format,)* "\n", $msg) ($($values),*) $($tail)*)
+    };
+
+    (@munch ($($format:expr),*) ($($values:expr),*) $expr:expr ; $($tail:tt)*) => {
+        $crate::_info!(@munch ($($format,)* "\n", stringify!($expr), " = {:?}") ($($values,)* $expr) $($tail)*)
+    };
+
+    (@munch ($($format:expr),*) ($($values:expr),*) $(;)?) => {
+        log::info!(concat!($($format),*), $($values),*)
+    };
+
+    ($($args:tt)*) => {{
+        #[cfg(debug_assertions)]
+        {
+            $crate::_info!(@munch () () $($args)* ;);
+        }
     }};
 }
 
@@ -152,17 +182,6 @@ macro_rules! _eprint {
         #[cfg(debug_assertions)]
         {
             eprintln!($($args)*);
-        }
-    };
-}
-
-#[macro_export]
-/// Info log in debug
-macro_rules! _info {
-    ($($arg:tt)*) => {
-        #[cfg(debug_assertions)]
-        {
-            log::info!($($arg)*);
         }
     };
 }

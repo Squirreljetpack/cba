@@ -390,19 +390,16 @@ macro_rules! env_vars {
 impl EnvVars {
     pub fn set(&mut self, key: impl Into<String>, value: impl ToString) {
         let key = key.into();
-        if let Some((_, v)) = self.0.iter_mut().find(|(k, _)| k == &key) {
+        if let Some((_, v)) = self.iter_mut().find(|(k, _)| k == &key) {
             *v = value.to_string();
         } else {
-            self.0.push((key, value.to_string()));
+            self.push((key, value.to_string()));
         }
     }
 
     pub fn get(&self, key: impl AsRef<str>) -> Option<&str> {
         let key = key.as_ref();
 
-        self.0
-            .iter()
-            .find(|(k, _)| k == key)
-            .map(|(_, v)| v.as_str())
+        self.iter().find(|(k, _)| k == key).map(|(_, v)| v.as_str())
     }
 }
