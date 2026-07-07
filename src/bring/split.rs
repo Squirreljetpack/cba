@@ -433,6 +433,34 @@ pub fn split_on_unescaped_delimiter(s: &str, delimiter: &str) -> Vec<String> {
     result
 }
 
+pub fn split_on_delimiter_with_doubled_escape(s: &str, delimiter: char) -> Vec<String> {
+    let mut result = Vec::new();
+    let mut current = String::new();
+    let chars: Vec<char> = s.chars().collect();
+    let mut i = 0;
+
+    while i < chars.len() {
+        if chars[i] == delimiter {
+            // Check if the next character is also the delimiter (Doubled Escape)
+            if i + 1 < chars.len() && chars[i + 1] == delimiter {
+                current.push(delimiter);
+                i += 2; // Consume both delimiters
+            } else {
+                // Single delimiter found -> Split
+                result.push(current);
+                current = String::new();
+                i += 1;
+            }
+        } else {
+            current.push(chars[i]);
+            i += 1;
+        }
+    }
+
+    result.push(current);
+    result
+}
+
 #[cfg(test)]
 mod delimiter_tests {
     use super::*;
