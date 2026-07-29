@@ -145,12 +145,14 @@ macro_rules! _dbg {
     }};
 }
 
+/// if cfg(debug_assertions), log::info expressions, "key": v and "literals".
+/// One per line, separated by `;`.
 #[macro_export]
 macro_rules! _info {
     (@munch ($($format:expr),*) ($($values:expr),*) $label:literal , $expr:expr ; $($tail:tt)*) => {
         $crate::_info!(@munch ($($format,)* "\n", $label, " = {:?}") ($($values,)* $expr) $($tail)*)
     };
-    
+
     (@munch ($($format:expr),*) ($($values:expr),*) $label:literal : $expr:expr ; $($tail:tt)*) => {
         $crate::_info!(@munch ($($format,)* "\n", $label, " = {:?}") ($($values,)* $expr) $($tail)*)
     };
@@ -169,6 +171,37 @@ macro_rules! _info {
 
     ($($args:tt)*) => {{
         #[cfg(debug_assertions)]
+        {
+            $crate::_info!(@munch () () $($args)* ;);
+        }
+    }};
+}
+
+/// log::trace expressions, "key": v and "literals".
+/// One per line, separated by `;`.
+#[macro_export]
+macro_rules! _trace {
+    (@munch ($($format:expr),*) ($($values:expr),*) $label:literal , $expr:expr ; $($tail:tt)*) => {
+        $crate::_info!(@munch ($($format,)* "\n", $label, " = {:?}") ($($values,)* $expr) $($tail)*)
+    };
+
+    (@munch ($($format:expr),*) ($($values:expr),*) $label:literal : $expr:expr ; $($tail:tt)*) => {
+        $crate::_info!(@munch ($($format,)* "\n", $label, " = {:?}") ($($values,)* $expr) $($tail)*)
+    };
+
+    (@munch ($($format:expr),*) ($($values:expr),*) $msg:literal ; $($tail:tt)*) => {
+        $crate::_info!(@munch ($($format,)* "\n", $msg) ($($values),*) $($tail)*)
+    };
+
+    (@munch ($($format:expr),*) ($($values:expr),*) $expr:expr ; $($tail:tt)*) => {
+        $crate::_info!(@munch ($($format,)* "\n", stringify!($expr), " = {:?}") ($($values,)* $expr) $($tail)*)
+    };
+
+    (@munch ($($format:expr),*) ($($values:expr),*) $(;)?) => {
+        log::trace!(concat!($($format),*), $($values),*)
+    };
+
+    ($($args:tt)*) => {{
         {
             $crate::_info!(@munch () () $($args)* ;);
         }

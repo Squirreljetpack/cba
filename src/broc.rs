@@ -446,7 +446,8 @@ pub fn has(name: &str) -> bool {
 
 // ENV VARS
 define_collection_wrapper!(
-    #[cfg_attr(feature = "serde", derive(Debug, serde::Serialize, serde::Deserialize, Clone, PartialEq))]
+    #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+    #[derive(Default, Debug, Clone, PartialEq)]
     EnvVars: Vec<(String, String)>
 );
 

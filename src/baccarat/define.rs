@@ -172,12 +172,6 @@ macro_rules! define_collection_wrapper {
             }
         }
 
-        impl Default for $name {
-            fn default() -> Self {
-                Self::new()
-            }
-        }
-
         impl From<$name> for $inner {
             fn from(c: $name) -> Self {
                 c.inner

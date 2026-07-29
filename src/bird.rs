@@ -178,6 +178,11 @@ pub mod transform {
         |s: String| camel_case(s)
     );
     defn_transform!(
+        as_option,
+        deserialize_option_with_transform => Option<T>,
+        |s: String| s
+    );
+    defn_transform!(
         uppercase_normalized_option,
         deserialize_option_with_transform => Option<T>,
         |s: String| s.to_ascii_uppercase()
