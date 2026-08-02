@@ -1,3 +1,12 @@
+## [0.6.0] - 2026-08-02
+
+### 🚀 Features
+
+- Support additional fields in collection wrapper
+- Doubled escape splitting
+- _trace! macro
+- Command::from_script now accepts shell override
+
 ## [0.5.0] - 2026-07-03
 
 ### 🚀 Features
