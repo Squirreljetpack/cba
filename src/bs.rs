@@ -2,7 +2,6 @@
 use crate::bait::ResultExt as _;
 use crate::bog::BogOkExt;
 use crate::{ebog, ibog, unwrap};
-use std::cmp::Ordering;
 use std::io;
 use std::path::{Component, PathBuf};
 use std::{
@@ -326,18 +325,4 @@ pub impl<T: AsRef<Path>> T {
             .map(|mut entries| entries.next().is_none())
             .unwrap_or(false)
     }
-}
-
-/// Sort paths by modification time (newest first).
-pub fn sort_by_mtime(paths: &mut Vec<PathBuf>) {
-    paths.sort_by(|a, b| {
-        let ma = fs::metadata(a).and_then(|m| m.modified());
-        let mb = fs::metadata(b).and_then(|m| m.modified());
-        match (ma, mb) {
-            (Ok(a), Ok(b)) => b.cmp(&a),
-            (Ok(_), Err(_)) => Ordering::Less,
-            (Err(_), Ok(_)) => Ordering::Greater,
-            (Err(_), Err(_)) => Ordering::Equal,
-        }
-    });
 }

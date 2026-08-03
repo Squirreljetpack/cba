@@ -101,6 +101,18 @@ pub mod empty_string_as_none {
     }
 }
 
+pub mod result_as_err {
+    use serde::{Deserialize, Deserializer};
+
+    pub fn deserialize<'de, D, E>(d: D) -> Result<Result<(), E>, D::Error>
+    where
+        D: Deserializer<'de>,
+        E: Deserialize<'de>,
+    {
+        Ok(Err(E::deserialize(d)?))
+    }
+}
+
 pub mod transform {
     pub use super::*;
 
@@ -211,6 +223,7 @@ pub mod transform {
     }
 }
 
+/// implement serde for types with FromStr or Display.
 /// # Caveats
 /// Doesn't support generics
 #[macro_export]

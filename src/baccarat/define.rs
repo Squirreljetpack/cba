@@ -109,7 +109,7 @@ macro_rules! define_restricted_wrapper {
 
 #[macro_export]
 /// Implement a wrapper around a container type (i.e. HashMap).
-/// Implements the Deref, DerefMut, Default and IntoIterator/FromIterator traits and the new function.
+/// Implements the Deref, DerefMut, IntoIterator/FromIterator traits and the new function.
 /// Wrapped content is accessible from inner field.
 ///
 /// ```rust

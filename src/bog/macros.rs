@@ -1,99 +1,165 @@
-// Sometimes easier to read than let else
+pub use crate::{_ibog, _wbog, cbog, dbog, ebog, ibog, mbog, nbog, wbog};
+
 #[macro_export]
+macro_rules! ibog {
+    // With tag expressions
+    ($($harg:expr),* ; $($arg:expr),*) => {{
+        $crate::BOGGER::bog(
+            $crate::bog::BogLevel::INFO,
+            &format!($($harg),*),
+            &format!($($arg),*),
+        );
+    }};
+    // Without tag
+    ($($arg:expr),*) => {{
+        $crate::BOGGER::bog(
+            $crate::bog::BogLevel::INFO,
+            "",
+            &format!($($arg),*),
+        );
+    }};
+}
 
-/// # Examples
-///
-/// Unwrap Option or return Default::default():
-/// ```rust
-/// use cba::unwrap;
-/// use std::fs::File;
-///
-/// pub fn check_should_template(path: &std::path::Path) -> bool {
-/// 	let err_prefix = format!("Failed to read {path:?} for templating");
-/// 	let file = unwrap!(File::open(path).ok());
-///
-/// 	// process file
-///
-/// 	true
-/// }
-/// ```
-///
-/// A closure in the second argument unwraps Result:
-/// ```rust,ignore
-/// for binname in list {
-/// 	let ActionBin {
-///             name,
-///             alias,
-///             ..
-/// 	} = unwrap!(
-///     	binname.parse();
-///     	|e| { err_count += 1; ebog!("Scan"; "Failed to parse filename of {}: {e}", path.to_string_lossy()) };
-///     	continue
-/// 	);
-///
-///	    println!("{name}");
-/// }
-/// ```
-macro_rules! unwrap {
-    ($expr:expr) => {
-        match $expr {
-            Some(v) => v,
-            None => {
-                return Default::default();
-            }
-        }
-    };
-    ($expr:expr; continue) => {
-        match $expr {
-            Some(v) => v,
-            None => continue,
-        }
-    };
+#[macro_export]
+macro_rules! dbog {
+    ($($harg:expr),* ; $($arg:expr),*) => {{
+        $crate::BOGGER::bog(
+            $crate::bog::BogLevel::DEBUG,
+            &format!($($harg),*),
+            &format!($($arg),*),
+        );
+    }};
+    ($($arg:expr),*) => {{
+        $crate::BOGGER::bog(
+            $crate::bog::BogLevel::DEBUG,
+            "",
+            &format!($($arg),*),
+        );
+    }};
+}
 
-    // this is a special case, so we use comma
-    ($expr:expr, $err:expr) => {
-        match $expr {
-            Some(v) => v,
-            None => {
-                return Err($err);
-            }
-        }
-    };
+#[macro_export]
+macro_rules! ebog {
+    ($($harg:expr),* ; $($arg:expr),*) => {{
+        $crate::BOGGER::bog(
+            $crate::bog::BogLevel::ERROR,
+            &format!($($harg),*),
+            &format!($($arg),*),
+        );
+    }};
+    ($($arg:expr),*) => {{
+        $crate::BOGGER::bog(
+            $crate::bog::BogLevel::ERROR,
+            "",
+            &format!($($arg),*),
+        );
+    }};
+}
 
-    ($expr:expr; |$i:ident| $body:expr) => {
-        match $expr {
-            Ok(v) => v,
-            Err(e) => {
-                return (|$i: String| $body)(e.to_string());
-            }
-        }
-    };
+#[macro_export]
+macro_rules! wbog {
+    ($($harg:expr),* ; $($arg:expr),*) => {{
+        $crate::BOGGER::bog(
+            $crate::bog::BogLevel::WARN,
+            &format!($($harg),*),
+            &format!($($arg),*),
+        );
+    }};
+    ($($arg:expr),*) => {{
+        $crate::BOGGER::bog(
+            $crate::bog::BogLevel::WARN,
+            "",
+            &format!($($arg),*),
+        );
+    }};
+}
 
-    ($expr:expr; |$i:ident: $ty:ty| $body:expr) => {
-        match $expr {
-            Ok(v) => v,
-            Err(e) => {
-                return (|$i: $ty| $body)(e);
-            }
-        }
-    };
+#[macro_export]
+macro_rules! nbog {
+    ($($harg:expr),* ; $($arg:expr),*) => {{
+        $crate::BOGGER::bog(
+            $crate::bog::BogLevel::NOTE,
+            &format!($($harg),*),
+            &format!($($arg),*),
+        );
+    }};
+    ($($arg:expr),*) => {{
+        $crate::BOGGER::bog(
+            $crate::bog::BogLevel::NOTE,
+            "",
+            &format!($($arg),*),
+        );
+    }};
+}
 
-    ($expr:expr; $v:expr) => {
-        match $expr {
-            Some(v) => v,
-            None => {
-                return $v;
-            }
-        }
-    };
+#[macro_export]
+macro_rules! mbog {
+    ($($harg:expr),* ; $($arg:expr),*) => {{
+        $crate::BOGGER::bog(
+            $crate::bog::BogLevel::EMPTY,
+            &format!($($harg),*),
+            &format!($($arg),*),
+        );
+    }};
+    ($($arg:expr),*) => {{
+        $crate::BOGGER::bog(
+            $crate::bog::BogLevel::EMPTY,
+            "",
+            &format!($($arg),*),
+        );
+    }};
+}
 
-    ($expr:expr; |$i:ident| $body:expr; continue) => {
-        match $expr {
-            Ok(v) => v,
-            Err(e) => {
-                (|$i| $body)(e);
-                continue;
-            }
-        }
-    };
+#[macro_export]
+macro_rules! cbog {
+    ($discriminant:literal ; $($harg:expr),* ; $($arg:expr),*) => {{
+        $crate::BOGGER::bog(
+            $crate::bog::BogLevel::CUSTOM($discriminant),
+            &format!($($harg),*),
+            &format!($($arg),*),
+        );
+    }};
+    ($discriminant:literal ; $($arg:expr),*) => {{
+        $crate::BOGGER::bog(
+            $crate::bog::BogLevel::CUSTOM($discriminant),
+            "",
+            &format!($($arg),*),
+        );
+    }};
+}
+
+#[macro_export]
+macro_rules! _wbog {
+    ($($harg:expr),* ; $($arg:expr),*) => {{
+        $crate::BOGGER::bog(
+            $crate::bog::BogLevel::_WRN,
+            &format!($($harg),*),
+            &format!($($arg),*),
+        );
+    }};
+    ($($arg:expr),*) => {{
+        $crate::BOGGER::bog(
+            $crate::bog::BogLevel::_WRN,
+            "",
+            &format!($($arg),*),
+        );
+    }};
+}
+
+#[macro_export]
+macro_rules! _ibog {
+    ($($harg:expr),* ; $($arg:expr),*) => {{
+        $crate::BOGGER::bog(
+            $crate::bog::BogLevel::_NFO,
+            &format!($($harg),*),
+            &format!($($arg),*),
+        );
+    }};
+    ($($arg:expr),*) => {{
+        $crate::BOGGER::bog(
+            $crate::bog::BogLevel::_NFO,
+            "",
+            &format!($($arg),*),
+        );
+    }};
 }
