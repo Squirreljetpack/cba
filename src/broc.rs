@@ -26,17 +26,27 @@ impl Child {
 impl Command {
     /// Use [`SHELL`] to create a command from a shell script
     /// On unix, the empty string is given to $0 so that subsequent args are fed to the script directly.
-    pub fn from_script(script: &str) -> Self {
-        let (shell, arg) = &*SHELL;
+    pub fn from_script(script: &str, shell: &[OsString]) -> Self {
+        let (def_sh, def_arg) = &*SHELL;
 
-        let mut ret = Command::new(shell);
+        let mut cmd = if shell.is_empty() {
+            let mut cmd = Command::new(def_sh);
+            cmd.arg(def_arg);
+            cmd
+        } else {
+            let mut cmd = Command::new(&shell[0]);
+            cmd.args(&shell[1..]);
+            cmd
+        };
+
+        cmd.arg(script);
 
         #[cfg(unix)]
-        ret.arg(arg).arg(script).arg(""); // the first argument is the program name which we leave empty
-        #[cfg(not(unix))]
-        ret.arg(arg).arg(script);
+        if shell.is_empty() {
+            cmd.arg("");
+        }
 
-        ret
+        cmd
     }
 
     pub fn with_arg<S: AsRef<OsStr>>(mut self, arg: S) -> Self {

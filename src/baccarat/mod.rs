@@ -182,19 +182,19 @@ macro_rules! _info {
 #[macro_export]
 macro_rules! _trace {
     (@munch ($($format:expr),*) ($($values:expr),*) $label:literal , $expr:expr ; $($tail:tt)*) => {
-        $crate::_info!(@munch ($($format,)* "\n", $label, " = {:?}") ($($values,)* $expr) $($tail)*)
+        $crate::_trace!(@munch ($($format,)* "\n", $label, " = {:?}") ($($values,)* $expr) $($tail)*)
     };
 
     (@munch ($($format:expr),*) ($($values:expr),*) $label:literal : $expr:expr ; $($tail:tt)*) => {
-        $crate::_info!(@munch ($($format,)* "\n", $label, " = {:?}") ($($values,)* $expr) $($tail)*)
+        $crate::_trace!(@munch ($($format,)* "\n", $label, " = {:?}") ($($values,)* $expr) $($tail)*)
     };
 
     (@munch ($($format:expr),*) ($($values:expr),*) $msg:literal ; $($tail:tt)*) => {
-        $crate::_info!(@munch ($($format,)* "\n", $msg) ($($values),*) $($tail)*)
+        $crate::_trace!(@munch ($($format,)* "\n", $msg) ($($values),*) $($tail)*)
     };
 
     (@munch ($($format:expr),*) ($($values:expr),*) $expr:expr ; $($tail:tt)*) => {
-        $crate::_info!(@munch ($($format,)* "\n", stringify!($expr), " = {:?}") ($($values,)* $expr) $($tail)*)
+        $crate::_trace!(@munch ($($format,)* "\n", stringify!($expr), " = {:?}") ($($values,)* $expr) $($tail)*)
     };
 
     (@munch ($($format:expr),*) ($($values:expr),*) $(;)?) => {
@@ -203,7 +203,7 @@ macro_rules! _trace {
 
     ($($args:tt)*) => {{
         {
-            $crate::_info!(@munch () () $($args)* ;);
+            $crate::_trace!(@munch () () $($args)* ;);
         }
     }};
 }
