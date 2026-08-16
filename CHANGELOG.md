@@ -1,3 +1,10 @@
+## [0.7.0] - 2026-08-16
+
+### 🚀 Features
+
+- VecMap — const-constructible insertion-ordered map
+- Fixes to symlink and serde helpers (compile time error if infinitely recursive types were present!)
+
 ## [0.6.0] - 2026-08-02
 
 ### 🚀 Features
