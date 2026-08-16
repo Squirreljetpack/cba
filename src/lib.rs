@@ -37,6 +37,8 @@ pub use crate::bird as serde;
 pub mod bog;
 pub use bog::BOGGER;
 
+pub mod vecmap;
+
 use std::fmt;
 #[derive(Debug, PartialEq, Eq)]
 pub struct StringError(pub String);
