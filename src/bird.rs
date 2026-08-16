@@ -22,16 +22,16 @@ pub mod one_or_many {
         }
     }
 
-    pub fn serialize<S, T, I>(value: &T, serializer: S) -> Result<S::Ok, S::Error>
+    pub fn serialize<T, S>(value: T, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
-        for<'a> &'a T: IntoIterator<Item = &'a I>,
-        I: Serialize,
+        T: IntoIterator + Copy,
+        T::Item: Serialize,
     {
         let mut iter = value.into_iter();
 
         match iter.next() {
-            None => serializer.collect_seq(std::iter::empty::<&I>()),
+            None => serializer.collect_seq(value),
             Some(first) => {
                 if iter.next().is_none() {
                     // single element → serialize as scalar

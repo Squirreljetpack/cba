@@ -1,56 +1,66 @@
-//! A map backed by a `Vec` of key-value pairs.
+//! A map backed by separate `Vec`s of keys and values.
 //!
-//! Lookup is linear, so this suits small maps. Unlike `HashMap` it has a
-//! `const` constructor (usable in statics) and a stable iteration order
-//! (insertion order).
+//! Lookup is linear over the contiguous keys array, so this suits small maps
+//! and benefits from cache locality. Unlike `HashMap` it has a `const` constructor
+//! (usable in statics) and a stable iteration order (insertion order).
 
 use std::borrow::Borrow;
 
-/// A map backed by a `Vec` of key-value pairs, preserving insertion order.
+/// A map backed by separate `Vec`s of keys and values, preserving insertion order.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct VecMap<K, V> {
-    vec: Vec<(K, V)>,
+    keys: Vec<K>,
+    values: Vec<V>,
 }
 
 impl<K, V> VecMap<K, V> {
     /// An empty map.
     pub const fn new() -> Self {
-        Self { vec: Vec::new() }
+        Self {
+            keys: Vec::new(),
+            values: Vec::new(),
+        }
     }
 
     /// Number of entries.
     pub fn len(&self) -> usize {
-        self.vec.len()
+        self.keys.len()
     }
 
     /// Whether the map is empty.
     pub fn is_empty(&self) -> bool {
-        self.vec.is_empty()
+        self.keys.is_empty()
     }
 
     /// Remove all entries.
     pub fn clear(&mut self) {
-        self.vec.clear();
+        self.keys.clear();
+        self.values.clear();
     }
 
     /// Iterate over the entries in insertion order.
     pub fn iter(&self) -> impl Iterator<Item = (&K, &V)> {
-        self.vec.iter().map(|(k, v)| (k, v))
+        self.keys.iter().zip(self.values.iter())
     }
 
     /// Iterate over the entries in insertion order, mutably.
     pub fn iter_mut(&mut self) -> impl Iterator<Item = (&K, &mut V)> {
-        self.vec.iter_mut().map(|(k, v)| (&*k, &mut *v))
+        self.keys.iter().zip(self.values.iter_mut())
     }
 
     /// Iterate over the keys in insertion order.
     pub fn keys(&self) -> impl Iterator<Item = &K> {
-        self.vec.iter().map(|(k, _)| k)
+        self.keys.iter()
     }
 
     /// Iterate over the values in insertion order.
     pub fn values(&self) -> impl Iterator<Item = &V> {
-        self.vec.iter().map(|(_, v)| v)
+        self.values.iter()
+    }
+
+    /// Iterate over the values mutably in insertion order.
+    pub fn values_mut(&mut self) -> impl Iterator<Item = &mut V> {
+        self.values.iter_mut()
     }
 }
 
@@ -61,7 +71,7 @@ impl<K: Eq, V> VecMap<K, V> {
         K: Borrow<Q>,
         Q: Eq,
     {
-        self.get(key).is_some()
+        self.keys.iter().any(|k| k.borrow() == key)
     }
 
     /// The value of `key`, if present.
@@ -70,10 +80,10 @@ impl<K: Eq, V> VecMap<K, V> {
         K: Borrow<Q>,
         Q: Eq,
     {
-        self.vec
+        self.keys
             .iter()
-            .find(|(k, _)| k.borrow() == key)
-            .map(|(_, v)| v)
+            .position(|k| k.borrow() == key)
+            .map(|i| &self.values[i])
     }
 
     /// Mutable reference to the value of `key`, if present.
@@ -82,28 +92,41 @@ impl<K: Eq, V> VecMap<K, V> {
         K: Borrow<Q>,
         Q: Eq,
     {
-        self.vec
-            .iter_mut()
-            .find(|(k, _)| k.borrow() == key)
-            .map(|(_, v)| v)
+        self.keys
+            .iter()
+            .position(|k| k.borrow() == key)
+            .map(|i| &mut self.values[i])
+    }
+
+    /// Reference to the value of `key`, inserting `default` first
+    /// when the key is absent.
+    pub fn get_or_insert(&mut self, key: K, default: V) -> &V {
+        if let Some(i) = self.keys.iter().position(|k| *k == key) {
+            return &self.values[i];
+        }
+        self.keys.push(key);
+        self.values.push(default);
+        self.values.last().expect("just pushed")
     }
 
     /// Mutable reference to the value of `key`, inserting `default` first
     /// when the key is absent.
     pub fn get_or_insert_mut(&mut self, key: K, default: V) -> &mut V {
-        if let Some(i) = self.vec.iter().position(|(k, _)| *k == key) {
-            return &mut self.vec[i].1;
+        if let Some(i) = self.keys.iter().position(|k| *k == key) {
+            return &mut self.values[i];
         }
-        self.vec.push((key, default));
-        &mut self.vec.last_mut().expect("just pushed").1
+        self.keys.push(key);
+        self.values.push(default);
+        self.values.last_mut().expect("just pushed")
     }
 
     /// Insert `value` for `key`, returning the previous value when present.
     pub fn insert(&mut self, key: K, value: V) -> Option<V> {
-        if let Some((_, v)) = self.vec.iter_mut().find(|(k, _)| *k == key) {
-            return Some(std::mem::replace(v, value));
+        if let Some(i) = self.keys.iter().position(|k| *k == key) {
+            return Some(std::mem::replace(&mut self.values[i], value));
         }
-        self.vec.push((key, value));
+        self.keys.push(key);
+        self.values.push(value);
         None
     }
 
@@ -113,10 +136,12 @@ impl<K: Eq, V> VecMap<K, V> {
         K: Borrow<Q>,
         Q: Eq,
     {
-        self.vec
-            .iter()
-            .position(|(k, _)| k.borrow() == key)
-            .map(|i| self.vec.remove(i).1)
+        if let Some(i) = self.keys.iter().position(|k| k.borrow() == key) {
+            self.keys.remove(i);
+            Some(self.values.remove(i))
+        } else {
+            None
+        }
     }
 }
 
@@ -151,10 +176,10 @@ impl<K: Eq, V> Extend<(K, V)> for VecMap<K, V> {
 
 impl<K, V> IntoIterator for VecMap<K, V> {
     type Item = (K, V);
-    type IntoIter = std::vec::IntoIter<(K, V)>;
+    type IntoIter = std::iter::Zip<std::vec::IntoIter<K>, std::vec::IntoIter<V>>;
 
     fn into_iter(self) -> Self::IntoIter {
-        self.vec.into_iter()
+        self.keys.into_iter().zip(self.values.into_iter())
     }
 }
 
@@ -181,13 +206,19 @@ mod tests {
     }
 
     #[test]
-    fn get_or_insert_mut() {
+    fn get_or_insert_and_get_or_insert_mut() {
         let mut map = VecMap::new();
-        let v = map.get_or_insert_mut("k", Vec::new());
+        let val = map.get_or_insert("a", 10);
+        assert_eq!(*val, 10);
+        let val = map.get_or_insert("a", 20);
+        assert_eq!(*val, 10);
+
+        let mut vec_map = VecMap::new();
+        let v = vec_map.get_or_insert_mut("k", Vec::new());
         v.push(1);
-        map.get_or_insert_mut("k", Vec::new()).push(2);
-        assert_eq!(map.get("k"), Some(&vec![1, 2]));
-        assert_eq!(*map.get_mut("k").unwrap(), vec![1, 2]);
+        vec_map.get_or_insert_mut("k", Vec::new()).push(2);
+        assert_eq!(vec_map.get("k"), Some(&vec![1, 2]));
+        assert_eq!(*vec_map.get_mut("k").unwrap(), vec![1, 2]);
     }
 
     #[test]
@@ -201,6 +232,8 @@ mod tests {
         );
         let mut iter = map.into_iter();
         assert_eq!(iter.next(), Some((1, "a")));
+        assert_eq!(iter.next(), Some((2, "b")));
+        assert_eq!(iter.next(), Some((3, "c")));
+        assert_eq!(iter.next(), None);
     }
 }
-

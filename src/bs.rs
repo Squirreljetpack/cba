@@ -148,8 +148,9 @@ pub fn symlink(
     }
 
     let target = if relative {
+        let base = dst.parent().unwrap_or(Path::new("."));
         unwrap!(
-            diff_paths(src, dst),
+            diff_paths(src, base),
             std::io::Error::other("Unable to determine relative path")
         )
     } else {
