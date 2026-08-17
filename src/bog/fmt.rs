@@ -75,10 +75,13 @@ impl BogFmter for Fg {
             BogLevel::INFO | BogLevel::_NFO => {
                 (Style::new().fg_color(Some(AnsiColor::Green.into())), "INFO")
             }
-            BogLevel::DEBUG => (Style::new().fg_color(Some(AnsiColor::Magenta.into())), "DBUG"),
+            BogLevel::DEBUG => (Style::new().fg_color(Some(AnsiColor::Cyan.into())), "DBUG"),
             BogLevel::EMPTY => (Style::new().fg_color(Some(AnsiColor::Black.into())), ""),
             BogLevel::___ => (Style::new(), ""),
-            BogLevel::CUSTOM(s) => (Style::new().fg_color(Some(AnsiColor::Blue.into())), s),
+            BogLevel::CUSTOM(s) => (
+                Style::new().fg_color(Some(AnsiColor::BrightCyan.into())),
+                s,
+            ),
         };
 
         let mut s = format!("{style}[{lvl}");
@@ -128,7 +131,7 @@ impl BogFmter for Bg {
             BogLevel::DEBUG => (
                 Style::new()
                     .fg_color(Some(AnsiColor::Black.into()))
-                    .bg_color(Some(AnsiColor::Magenta.into())),
+                    .bg_color(Some(AnsiColor::Cyan.into())),
                 "DEBUG",
             ),
             BogLevel::EMPTY => (
@@ -141,7 +144,7 @@ impl BogFmter for Bg {
             BogLevel::CUSTOM(s) => (
                 Style::new()
                     .fg_color(Some(AnsiColor::Black.into()))
-                    .bg_color(Some(AnsiColor::Blue.into())),
+                    .bg_color(Some(AnsiColor::BrightCyan.into())),
                 s,
             ),
         };
