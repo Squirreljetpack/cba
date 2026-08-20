@@ -485,4 +485,9 @@ impl EnvVars {
 
         self.iter().find(|(k, _)| k == key).map(|(_, v)| v.as_str())
     }
+
+    /// Returns an iterator of borrowed `(&str, &str)` pairs suitable for passing directly into `Command::envs`.
+    pub fn as_strs(&self) -> impl Iterator<Item = (&str, &str)> {
+        self.iter().map(|(k, v)| (k.as_str(), v.as_str()))
+    }
 }
