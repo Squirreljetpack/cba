@@ -1,7 +1,6 @@
 //! Path manipulation
 
 use crate::StringError;
-use crate::bait::ResultExt;
 use std::path::{Component, Path, PathBuf};
 
 /// Split path around last '.'
@@ -215,76 +214,4 @@ pub fn bytes_to_os_string(bytes: Vec<u8>) -> OsString {
 /// Note: (Intent is that it's possibly useful for macros).
 pub fn to_string_lossy(s: &impl AsRef<std::ffi::OsStr>) -> std::borrow::Cow<'_, str> {
     s.as_ref().to_string_lossy()
-}
-
-// ----------------------
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub enum RenamePolicy {
-    WrappedInc(String, String),
-    // WrappedSuffix(&'static str, &'static str),
-    // RepeatedPrefix,
-    Replace, // don't check
-}
-
-// impl RenamePolicy {
-//     pub const DEFAULT: Self = Self::WrappedInc("_", "");
-// }
-
-impl Default for RenamePolicy {
-    fn default() -> Self {
-        Self::WrappedInc("_".into(), "".into())
-    }
-}
-
-// Requires: src is a normalized path with a filename
-// If dest ends with a slash, target becomes dest/src_name
-pub fn auto_dest_for_src(
-    src: impl AsRef<Path>,
-    dest: impl AsRef<OsStr>,
-    method: &RenamePolicy,
-) -> PathBuf {
-    let src = src.as_ref();
-    let dest = dest.as_ref();
-
-    let put_into_dest =
-        dest.is_empty() || dest.to_string_lossy().ends_with(std::path::MAIN_SEPARATOR);
-    let dest_path = Path::new(dest).normalize();
-
-    let initial_dest = if put_into_dest || dest_path.file_name().is_none() {
-        let name = src
-            .file_name()
-            .expect("Could not determine a valid destination: missing file_name.");
-        dest_path.join(name)
-    } else {
-        dest_path
-    };
-
-    match method {
-        RenamePolicy::Replace => {
-            return initial_dest;
-        }
-        RenamePolicy::WrappedInc(prefix, suffix) => {
-            if !initial_dest.exists() {
-                return initial_dest;
-            }
-
-            let parent = initial_dest.parent().unwrap_or(&initial_dest);
-            let s = initial_dest.filename()._elog().unwrap_or_default();
-            let [stem, ext] = split_ext(&s);
-
-            for i in 1usize.. {
-                let candidate: PathBuf = parent.join(if ext.is_empty() {
-                    format!("{stem}{prefix}{i}{suffix}")
-                } else {
-                    format!("{stem}{prefix}{i}{suffix}.{ext}")
-                });
-
-                if !candidate.exists() {
-                    return candidate;
-                }
-            }
-            unreachable!()
-        }
-    }
 }
