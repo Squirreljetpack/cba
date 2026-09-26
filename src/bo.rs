@@ -101,7 +101,8 @@ pub fn load_type<T, E: std::fmt::Display>(
 
 /// If the path exists, load from it, otherwise load from the provided default.
 ///
-/// Prints error.
+/// If `target` is provided, logs a warning to the given target on failure;
+/// otherwise logs via `bog`.
 ///
 /// # Example
 /// ```rust, ignore
@@ -122,34 +123,26 @@ pub fn load_type<T, E: std::fmt::Display>(
 ///     }
 /// }
 ///
-/// let cfg: LessfilterConfig = load_type_or_default(lessfilter_cfg_path(), |s| toml::from_str(s));
+/// let cfg: LessfilterConfig = load_type_or_default(lessfilter_cfg_path(), None, |s| toml::from_str(s));
 /// ```
 pub fn load_type_or_default<T: Default, E: std::fmt::Display>(
     path: impl AsRef<Path>,
+    target: Option<&str>,
     str_loader: impl Fn(&str) -> Result<T, E>,
 ) -> T {
     let path = path.as_ref();
     if path.is_file() {
-        load_type(path, &str_loader)
-            .prefix("Using default config due to errors")
-            ._wbog()
-            .unwrap_or_else(T::default)
-    } else {
-        T::default()
-    }
-}
-
-/// [`load_type_or_default`] but log instead of bog
-pub fn load_type_or_default_log<T: Default, E: std::fmt::Display>(
-    path: impl AsRef<Path>,
-    str_loader: impl Fn(&str) -> Result<T, E>,
-) -> T {
-    let path = path.as_ref();
-    if path.is_file() {
-        load_type(path, &str_loader)
-            .prefix("Using default config due to errors")
-            ._wlog()
-            .unwrap_or_else(T::default)
+        let res = load_type(path, &str_loader).prefix("Using default config due to errors");
+        match target {
+            Some(target) => match res {
+                Ok(val) => val,
+                Err(err) => {
+                    log::warn!(target: target, "{err}");
+                    T::default()
+                }
+            },
+            None => res._wbog().unwrap_or_else(T::default),
+        }
     } else {
         T::default()
     }

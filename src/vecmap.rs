@@ -7,7 +7,7 @@
 use std::borrow::Borrow;
 
 /// A map backed by separate `Vec`s of keys and values, preserving insertion order.
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct VecMap<K, V> {
     keys: Vec<K>,
     values: Vec<V>,
@@ -61,6 +61,30 @@ impl<K, V> VecMap<K, V> {
     /// Iterate over the values mutably in insertion order.
     pub fn values_mut(&mut self) -> impl Iterator<Item = &mut V> {
         self.values.iter_mut()
+    }
+
+    /// Return the key-value pair at `index`, if within bounds.
+    pub fn get_index(&self, index: usize) -> Option<(&K, &V)> {
+        if index < self.keys.len() {
+            Some((&self.keys[index], &self.values[index]))
+        } else {
+            None
+        }
+    }
+
+    /// Return mutable key-value pair at `index`, if within bounds.
+    pub fn get_index_mut(&mut self, index: usize) -> Option<(&K, &mut V)> {
+        if index < self.keys.len() {
+            Some((&self.keys[index], &mut self.values[index]))
+        } else {
+            None
+        }
+    }
+}
+
+impl<K, V> Default for VecMap<K, V> {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -180,6 +204,46 @@ impl<K, V> IntoIterator for VecMap<K, V> {
 
     fn into_iter(self) -> Self::IntoIter {
         self.keys.into_iter().zip(self.values.into_iter())
+    }
+}
+
+impl<'a, K, V> IntoIterator for &'a VecMap<K, V> {
+    type Item = (&'a K, &'a V);
+    type IntoIter = std::iter::Zip<std::slice::Iter<'a, K>, std::slice::Iter<'a, V>>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.keys.iter().zip(self.values.iter())
+    }
+}
+
+impl<'a, K, V> IntoIterator for &'a mut VecMap<K, V> {
+    type Item = (&'a K, &'a mut V);
+    type IntoIter = std::iter::Zip<std::slice::Iter<'a, K>, std::slice::IterMut<'a, V>>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.keys.iter().zip(self.values.iter_mut())
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<K: serde::Serialize, V: serde::Serialize> serde::Serialize for VecMap<K, V> {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        use serde::ser::SerializeSeq;
+
+        let mut seq = serializer.serialize_seq(Some(self.len()))?;
+        for (key, value) in self.iter() {
+            seq.serialize_element(&(key, value))?;
+        }
+        seq.end()
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de, K: Eq + serde::Deserialize<'de>, V: serde::Deserialize<'de>> serde::Deserialize<'de>
+    for VecMap<K, V>
+{
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        Vec::<(K, V)>::deserialize(deserializer).map(|entries| entries.into_iter().collect())
     }
 }
 
