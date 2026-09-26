@@ -19,6 +19,7 @@ which = "8.0.5"
 anyhow = "1.0.104"
 anstyle = "1.0"
 anstream = "1.0"
+tempfile = "3.27.0"
 
 [features]
 bring = ["dep:unicode-width"] # string
