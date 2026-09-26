@@ -22,6 +22,66 @@ pub fn dump_type<'a, T, E: Error>(
     fs::write(path, content).prefix(&error_prefix)
 }
 
+/// Serializes a value to a temporary file beside `path`, then atomically replaces `path`.
+///
+/// The destination's parent directory must already exist. The temporary file is synchronized
+/// before it is persisted, so readers see either the previous complete file or the new one.
+pub fn dump_type_atomic<'a, T, E: Error>(
+    path: impl AsRef<Path>,
+    input: &'a T,
+    string_maker: impl FnOnce(&'a T) -> Result<String, E>,
+) -> Result<(), StringError> {
+    let path = path.as_ref();
+    let type_name = std::any::type_name::<T>().rsplit("::").next().unwrap();
+    let error_prefix = format!("Failed to save {type_name} to {}", path.to_string_lossy());
+    let content = string_maker(input).prefix(&error_prefix)?;
+    let parent = path
+        .parent()
+        .filter(|parent| !parent.as_os_str().is_empty())
+        .unwrap_or_else(|| Path::new("."));
+
+    let mut temporary = tempfile::NamedTempFile::new_in(parent).prefix(&error_prefix)?;
+    io::Write::write_all(temporary.as_file_mut(), content.as_bytes()).prefix(&error_prefix)?;
+    temporary.as_file_mut().sync_all().prefix(&error_prefix)?;
+    temporary
+        .persist(path)
+        .map(|_| ())
+        .map_err(|error| error.error)
+        .prefix(&error_prefix)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn atomically_replaces_the_destination() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("value.txt");
+        fs::write(&path, "old").unwrap();
+
+        dump_type_atomic(&path, &"new", |value| {
+            Ok::<_, io::Error>((*value).to_owned())
+        })
+        .unwrap();
+
+        assert_eq!(fs::read_to_string(path).unwrap(), "new");
+    }
+
+    #[test]
+    fn serialization_failure_keeps_the_destination() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("value.txt");
+        fs::write(&path, "old").unwrap();
+
+        let result = dump_type_atomic(&path, &"new", |_| {
+            Err::<String, _>(io::Error::other("cannot serialize"))
+        });
+
+        assert!(result.is_err());
+        assert_eq!(fs::read_to_string(path).unwrap(), "old");
+    }
+}
 /// Returns error string if file could not be found/read/parsed.
 pub fn load_type<T, E: std::fmt::Display>(
     path: impl AsRef<Path>,
