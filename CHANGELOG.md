@@ -1,3 +1,13 @@
+## [0.8.0] - 2026-10-29
+
+### 🚀 Features
+
+- Color update
+- EnvVars: as_strs method
+- Claim
+- *(io)* Add atomic typed writes
+- *(vecmap)* Add serde impls and unbounded Default
+
 ## [0.7.0] - 2026-08-16
 
 ### 🚀 Features
