@@ -1,3 +1,13 @@
+## [0.8.1] - 2026-10-30
+
+### 📚 Documentation
+
+- Document the public API
+
+### ⚙️ Miscellaneous Tasks
+
+- Drop unused dirs/anyhow deps, relax version floors, clear clippy lints
+
 ## [0.8.0] - 2026-10-29
 
 ### 🚀 Features
