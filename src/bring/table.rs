@@ -5,6 +5,7 @@ use std::{
 
 use super::StrExt;
 
+/// Print rows of aligned columns to a writer.
 pub struct TableBuilder<T, U, W, const N: usize>
 where
     T: Display,
@@ -31,6 +32,7 @@ where
     T: Display,
     U: Display,
 {
+    /// A table of `N` columns printing to stdout.
     pub fn new(widths: [usize; N]) -> Self {
         Self {
             writer: std::io::stdout().lock(),
@@ -50,6 +52,7 @@ where
     U: Display,
     W: Write,
 {
+    /// A table of `N` columns printing to `writer`.
     pub fn new_with_writer(widths: [usize; N], writer: W) -> Self {
         Self {
             writer,
@@ -62,21 +65,25 @@ where
         }
     }
 
+    /// Header row, printed before the first separator.
     pub fn header(mut self, hdr: [T; N]) -> Self {
         self.header = Some(hdr);
         self
     }
 
+    /// Line printed under the header.
     pub fn separator(mut self, sep: impl Display) -> Self {
         self.sep = Some(sep.to_string());
         self
     }
 
+    /// Line printed under the header, made of `c` repeated to the full table width.
     pub fn repeated_separator(mut self, c: impl Display) -> Self {
         self.sep = Some(c.to_string().repeat(self.widths.iter().sum()));
         self
     }
 
+    /// Format each header cell from `(text, column index)`.
     pub fn header_formatter<F>(mut self, f: F) -> Self
     where
         F: Fn(String, usize) -> String + 'static,
@@ -85,6 +92,7 @@ where
         self
     }
 
+    /// Format each cell from `(text, [row, column])`.
     pub fn cell_formatter<F>(mut self, f: F) -> Self
     where
         F: Fn(String, [usize; 2]) -> String + 'static,
@@ -93,16 +101,19 @@ where
         self
     }
 
+    /// Add one row.
     pub fn row(mut self, row: [U; N]) -> Self {
         self.rows.push(row);
         self
     }
 
+    /// Replace the rows.
     pub fn rows(mut self, rows: impl IntoIterator<Item = [U; N]>) -> Self {
         self.rows = rows.into_iter().collect();
         self
     }
 
+    /// Write the table, columns left, center and right aligned respectively.
     pub fn print(&mut self) -> std::io::Result<()> {
         let w = &mut self.writer;
         // helper to align

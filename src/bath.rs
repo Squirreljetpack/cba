@@ -12,6 +12,7 @@ pub fn split_ext(p: &str) -> [&str; 2] {
     }
 }
 
+/// Path helpers on anything that is `AsRef<Path>`.
 #[easy_ext::ext(PathExt)]
 pub impl<T: AsRef<Path>> T {
     /// Convert to str, or provide useful error.
@@ -36,6 +37,7 @@ pub impl<T: AsRef<Path>> T {
         .to_string()
     }
 
+    /// Render the path with `home_dir` abbreviated to `~`.
     fn display_short(&self, home_dir: &Path) -> String {
         let path = self.as_ref();
         if let Ok(stripped) = path.strip_prefix(home_dir) {
@@ -45,6 +47,7 @@ pub impl<T: AsRef<Path>> T {
         }
     }
 
+    /// Number of components after [`normalize`](PathExt::normalize).
     fn len(&self) -> usize {
         self.as_ref().normalize().iter().count()
     }
@@ -90,6 +93,7 @@ pub impl<T: AsRef<Path>> T {
         base.join(path).normalize()
     }
 
+    /// Whether the path has no components, i.e. it is `""`.
     fn is_empty(&self) -> bool {
         let path = self.as_ref();
         path.components().next().is_none()
@@ -191,12 +195,14 @@ pub fn os_str_to_bytes(string: &OsStr) -> Cow<'_, [u8]> {
 }
 
 #[cfg(unix)]
+/// Rebuild an `OsString` from the bytes produced by [`os_str_to_bytes`].
 pub fn bytes_to_os_string(bytes: Vec<u8>) -> OsString {
     use std::os::unix::ffi::OsStringExt;
     OsString::from_vec(bytes)
 }
 
 #[cfg(windows)]
+/// Rebuild an `OsString` from little-endian UTF-16 bytes.
 pub fn bytes_to_os_string(bytes: Vec<u8>) -> OsString {
     use std::os::windows::ffi::OsStringExt;
 

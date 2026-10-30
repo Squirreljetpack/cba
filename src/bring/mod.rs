@@ -1,5 +1,6 @@
 mod table;
 pub use table::TableBuilder;
+/// Split strings into tokens and fields.
 pub mod split;
 mod str;
 pub use self::str::*;

@@ -1,17 +1,23 @@
 // ----- MESSAGE FORMATTING --------
 
+/// Severity of a bog message, shown as a colored tag.
 #[derive(Clone, Copy, Debug)]
 pub enum BogLevel {
     /// Neutral message carrying no severity, used for ancillary output.
     NOTE,
+    /// Recoverable failure.
     ERROR,
+    /// Something is off but execution continues.
     WARN,
+    /// Progress and context for the user.
     INFO,
     /// Low priority warn
     _WRN,
     /// Low priority info
     _NFO,
+    /// Developer-facing detail.
     DEBUG,
+    /// Prints only the tag, with no level prefix.
     EMPTY,
     /// A "never" level.
     ///
@@ -19,6 +25,7 @@ pub enum BogLevel {
     /// This should be kept at priority 0 in [`BogFmter::priority`].
     ___,
 
+    /// A user-defined level, labelled with the given literal.
     CUSTOM(&'static str), // e.g. trace
 }
 
@@ -26,8 +33,10 @@ pub enum BogLevel {
 ///
 /// Also see: [`Fg`] and [`Bg`].
 pub trait BogFmter {
+    /// The prefix shown before the message.
     fn tag(&self, level: BogLevel, tag: &str) -> String;
 
+    /// The full line: the tag plus the message, if there is one.
     fn format(&self, level: BogLevel, tag: &str, msg: &str) -> String {
         let mut s = self.tag(level, tag);
 
@@ -61,6 +70,7 @@ pub trait BogFmter {
 }
 
 // -------- IMPL ---------
+/// Foreground formatter: colored `[LEVEL: tag]` prefix.
 pub struct Fg {}
 impl BogFmter for Fg {
     fn tag(&self, level: BogLevel, tag: &str) -> String {
@@ -98,6 +108,7 @@ impl BogFmter for Fg {
     }
 }
 
+/// Background-color formatter: colored `LEVEL| tag` block prefix.
 pub struct Bg {}
 impl BogFmter for Bg {
     fn tag(&self, level: BogLevel, tag: &str) -> String {

@@ -2,6 +2,7 @@ use std::fmt::Display;
 
 use crate::StringError;
 
+/// Overwrite `self` from a maybe.
 #[easy_ext::ext(MaybeExt)]
 pub impl<T> T
 where
@@ -27,6 +28,7 @@ where
 }
 
 // this would be more useful if try blocks exposed their "other" type so we could call into on e
+/// Turn failures into logs or into [`StringError`]s.
 #[easy_ext::ext(ResultExt)]
 pub impl<T, E> Result<T, E> {
     /// cast result types.
@@ -143,6 +145,7 @@ pub impl<T, E> Result<T, E> {
     }
 }
 
+/// Turn a missing value into a log line, an exit, or an error.
 #[easy_ext::ext(OptionExt)]
 pub impl<T> Option<T> {
     /// Unwrap or exit
@@ -186,23 +189,28 @@ pub impl<T> Option<T> {
     }
 }
 
+/// Branching helpers that read as expressions.
 #[easy_ext::ext(BoolExt)]
 pub impl bool {
+    /// `and` when true, `or` when false.
     #[inline]
     fn ternary<U>(&self, and: U, or: U) -> U {
         self.then_some(and).unwrap_or(or)
     }
 
+    /// Run `f` only when true.
     #[inline]
     fn and_then<U>(&self, f: impl FnOnce() -> Option<U>) -> Option<U> {
         if *self { f() } else { None }
     }
 
+    /// Logical negation.
     #[inline]
     fn neg(&self) -> Self {
         !*self
     }
 
+    /// Exit the process with status 1 when false.
     #[inline]
     fn or_exit(&self) {
         if !self {
@@ -214,8 +222,10 @@ pub impl bool {
 // ---------------------------------
 
 use std::sync::{Mutex, MutexGuard};
+/// Locking helpers on `Mutex`.
 #[easy_ext::ext(MutexExt)]
 pub impl<T> Mutex<T> {
+    /// Lock, recovering the guard if a previous holder panicked.
     fn _lock(&self) -> MutexGuard<'_, T> {
         match self.lock() {
             Ok(g) => g,
@@ -226,8 +236,10 @@ pub impl<T> Mutex<T> {
 
 // ---------------------------------
 
+/// Pass-by-value method chaining.
 #[easy_ext::ext(TransformExt)]
 pub impl<T> T {
+    /// Run `transform` on the value and return its result.
     fn transform<Q>(self, transform: impl FnOnce(Self) -> Q) -> Q
     where
         T: Sized,
@@ -252,6 +264,7 @@ pub impl<T> T {
         if condition { transform(self) } else { self }
     }
 
+    /// Run `modify` on a mutable borrow, then hand the value back.
     fn modify<Q>(mut self, modify: impl FnOnce(&mut Self) -> Q) -> Self
     where
         T: Sized,
@@ -318,6 +331,7 @@ pub impl<T> T {
         changed
     }
 
+    /// `dbg!` the value, then hand it back.
     fn dbg(self) -> Self
     where
         T: std::fmt::Debug,

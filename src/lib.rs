@@ -23,15 +23,21 @@ pub mod bo; // File read/write
 pub mod broc;
 pub mod bs; // Filesystem check/set/read
 
+/// Macros for building values (`vec_!`, `prints!`) and defining wrapper types.
 pub mod baccarat;
+/// Extension traits that log or discard errors, exit, and chain transforms.
 pub mod bait;
+/// Log level filters picked from `RUST_LOG` or CLI verbosity flags.
 pub mod bother;
-pub mod bum; // macro
+/// Numeric helpers on `f32` and on `usize` counters.
+pub mod bum;
 
 #[cfg(feature = "bring")]
+/// Feature `bring`: string padding, splitting and table printing.
 pub mod bring;
 
 #[cfg(feature = "serde")]
+/// Feature `serde`: helpers for `#[serde(with = ...)]`.
 pub mod bird;
 #[cfg(feature = "serde")]
 pub use crate::bird as serde;
@@ -43,6 +49,7 @@ pub mod vecmap;
 
 use std::fmt;
 #[derive(Debug, PartialEq, Eq)]
+/// An error carrying an already formatted message.
 pub struct StringError(pub String);
 
 impl fmt::Display for StringError {

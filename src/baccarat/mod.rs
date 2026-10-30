@@ -82,7 +82,7 @@ macro_rules! prints {
 }
 
 #[macro_export]
-// Easier than format! for concatenating strings
+/// Format and concatenate expressions into a `String`, terse where `format!` is noisy.
 macro_rules! concat_ {
     ( $( $x:expr ),* $(,)? ) => {{
         use std::fmt::Write;

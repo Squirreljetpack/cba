@@ -1,6 +1,7 @@
 pub use crate::{_ibog, _wbog, cbog, dbog, ebog, ibog, mbog, nbog, wbog};
 
 #[macro_export]
+/// Bog an `INFO` message, optionally tagged: `ibog!("tag"; "msg {}", x)`.
 macro_rules! ibog {
     // With tag expressions
     ($($harg:expr),* ; $($arg:expr),*) => {{
@@ -21,6 +22,7 @@ macro_rules! ibog {
 }
 
 #[macro_export]
+/// Bog a `DEBUG` message, optionally tagged: `dbog!("tag"; "msg {}", x)`.
 macro_rules! dbog {
     ($($harg:expr),* ; $($arg:expr),*) => {{
         $crate::BOGGER::bog(
@@ -39,6 +41,7 @@ macro_rules! dbog {
 }
 
 #[macro_export]
+/// Bog an `ERROR` message, optionally tagged: `ebog!("tag"; "msg {}", x)`.
 macro_rules! ebog {
     ($($harg:expr),* ; $($arg:expr),*) => {{
         $crate::BOGGER::bog(
@@ -57,6 +60,7 @@ macro_rules! ebog {
 }
 
 #[macro_export]
+/// Bog a `WARN` message, optionally tagged: `wbog!("tag"; "msg {}", x)`.
 macro_rules! wbog {
     ($($harg:expr),* ; $($arg:expr),*) => {{
         $crate::BOGGER::bog(
@@ -75,6 +79,7 @@ macro_rules! wbog {
 }
 
 #[macro_export]
+/// Bog a `NOTE` message, optionally tagged: `nbog!("tag"; "msg {}", x)`.
 macro_rules! nbog {
     ($($harg:expr),* ; $($arg:expr),*) => {{
         $crate::BOGGER::bog(
@@ -93,6 +98,7 @@ macro_rules! nbog {
 }
 
 #[macro_export]
+/// Bog a tag-only message, with no level prefix: `mbog!("tag"; "msg {}", x)`.
 macro_rules! mbog {
     ($($harg:expr),* ; $($arg:expr),*) => {{
         $crate::BOGGER::bog(
@@ -111,6 +117,7 @@ macro_rules! mbog {
 }
 
 #[macro_export]
+/// Bog at a custom level: `cbog!("LABEL"; "tag"; "msg {}", x)`.
 macro_rules! cbog {
     ($discriminant:literal ; $($harg:expr),* ; $($arg:expr),*) => {{
         $crate::BOGGER::bog(
@@ -129,6 +136,7 @@ macro_rules! cbog {
 }
 
 #[macro_export]
+/// Bog a low-priority `WARN` message, optionally tagged.
 macro_rules! _wbog {
     ($($harg:expr),* ; $($arg:expr),*) => {{
         $crate::BOGGER::bog(
@@ -147,6 +155,7 @@ macro_rules! _wbog {
 }
 
 #[macro_export]
+/// Bog a low-priority `INFO` message, optionally tagged.
 macro_rules! _ibog {
     ($($harg:expr),* ; $($arg:expr),*) => {{
         $crate::BOGGER::bog(

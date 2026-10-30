@@ -11,8 +11,10 @@ use std::{
     sync::LazyLock,
 };
 
+/// Exit status helpers on `Child`.
 #[easy_ext::ext(ChildExt)]
 impl Child {
+    /// Wait for exit and return the code, `1` if killed by a signal or wait failed.
     pub fn wait_for_code(&mut self) -> i32 {
         if let Some(status) = self.wait()._elog() {
             status.code().unwrap_or(1)
@@ -22,6 +24,7 @@ impl Child {
     }
 }
 
+/// Builder helpers on `Command`.
 #[easy_ext::ext(CommandExt)]
 impl Command {
     /// Use [`SHELL`] to create a command from a shell script
@@ -49,11 +52,13 @@ impl Command {
         cmd
     }
 
+    /// [`arg`](Command::arg), returning the command.
     pub fn with_arg<S: AsRef<OsStr>>(mut self, arg: S) -> Self {
         self.arg(arg);
         self
     }
 
+    /// [`args`](Command::args), returning the command.
     pub fn with_args<I, S>(mut self, args: I) -> Self
     where
         I: IntoIterator<Item = S>,
@@ -359,6 +364,7 @@ pub fn format_sh_command(inputs: &[impl AsRef<OsStr>], double: bool) -> OsString
     cmd
 }
 
+/// Shell-quoted display of a program and its arguments.
 pub fn display_sh_prog_and_args(prog: impl AsRef<OsStr>, args: &[impl AsRef<OsStr>]) -> String {
     format_sh_command(
         &{
@@ -411,6 +417,7 @@ pub fn current_shell() -> String {
     String::new()
 }
 
+/// Cached read/write handle to `/dev/tty`, `None` if it could not be opened.
 pub static TTY_HANDLE: LazyLock<Option<std::fs::File>> = LazyLock::new(|| {
     std::fs::OpenOptions::new()
         .read(true)
@@ -441,6 +448,7 @@ thread_local! {
     static HAS_CACHE: RefCell<HashMap<String, bool>> = RefCell::new(HashMap::new());
 }
 
+/// Whether `name` resolves on `PATH`. Results are cached per thread.
 pub fn has(name: &str) -> bool {
     HAS_CACHE.with(|cache| {
         let mut cache = cache.borrow_mut();
@@ -462,6 +470,7 @@ define_collection_wrapper!(
 );
 
 #[macro_export]
+/// Build [`EnvVars`] from `key => value` pairs, converting values with `to_string`.
 macro_rules! env_vars {
     ($( $name:expr => $value:expr ),* $(,)?) => {
         $crate::broc::EnvVars::from(vec![
@@ -471,6 +480,7 @@ macro_rules! env_vars {
 
 }
 impl EnvVars {
+    /// Insert `key`, or overwrite its value if already set.
     pub fn set(&mut self, key: impl Into<String>, value: impl ToString) {
         let key = key.into();
         if let Some((_, v)) = self.iter_mut().find(|(k, _)| k == &key) {
@@ -480,6 +490,7 @@ impl EnvVars {
         }
     }
 
+    /// Value of `key`, if set.
     pub fn get(&self, key: impl AsRef<str>) -> Option<&str> {
         let key = key.as_ref();
 

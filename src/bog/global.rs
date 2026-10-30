@@ -138,6 +138,7 @@ pub struct BogContext {
 }
 
 impl BogContext {
+    /// A context that changes nothing.
     pub fn new() -> Self {
         Self {
             bounds: [None, None],
@@ -149,36 +150,43 @@ impl BogContext {
         }
     }
 
+    /// Downcast messages above `level` to `level`.
     pub fn upper(mut self, level: BogLevel) -> Self {
         self.bounds[1] = Some(level);
         self
     }
 
+    /// Drop messages below `level`.
     pub fn lower(mut self, level: BogLevel) -> Self {
         self.bounds[0] = Some(level);
         self
     }
 
+    /// Silence all messages for the duration of the context.
     pub fn pause(mut self, pause: bool) -> Self {
         self.pause = pause;
         self
     }
 
+    /// Prepend to every message.
     pub fn prefix<S: Into<String>>(mut self, prefix: S) -> Self {
         self.prefix = Some(prefix.into());
         self
     }
 
+    /// Append to every message.
     pub fn suffix<S: Into<String>>(mut self, suffix: S) -> Self {
         self.suffix = Some(suffix.into());
         self
     }
 
+    /// Replace the per-call tag of every message.
     pub fn tag<S: Into<String>>(mut self, tag: S) -> Self {
         self.tag_override = Some(tag.into());
         self
     }
 
+    /// `Some(true)` to only log, `Some(false)` to only bog, `None` for both.
     pub fn log(mut self, log: Option<bool>) -> Self {
         self.log = log;
         self
@@ -192,6 +200,7 @@ impl Default for BogContext {
 }
 
 // --------- EXPORTS/MAIN API ---------
+/// Handle on the global bogger, a no-op until [`init_bogger`] runs.
 pub struct BOGGER {}
 // organize under namespace
 impl BOGGER {
@@ -322,6 +331,7 @@ impl BOGGER {
 }
 
 // ----------- INITIALIZATION -------------
+/// Install the global bogger, styled with [`Fg`] or [`Bg`] and writing to stdout or stderr.
 pub fn init_bogger(fg: bool, output_stderr: bool) {
     let writer: Box<dyn Write + Send + Sync> = if output_stderr {
         Box::new(anstream::AutoStream::auto(stderr()))
@@ -402,6 +412,7 @@ pub fn init_filter(verbosity: u8) {
 
 #[easy_ext::ext(BogOkExt)]
 pub impl<T, E: Display> Result<T, E> {
+    /// Bog the error at `level` with `tag` and discard it.
     fn _bog_<'a>(self, level: BogLevel, tag: impl Into<Cow<'a, str>>) -> Option<T> {
         match self {
             Ok(val) => Some(val),
@@ -412,46 +423,57 @@ pub impl<T, E: Display> Result<T, E> {
         }
     }
 
+    /// [`_bog_`](BogOkExt::_bog_) at [`BogLevel::ERROR`].
     fn _ebog_<'a>(self, tag: impl Into<Cow<'a, str>>) -> Option<T> {
         self._bog_(BogLevel::ERROR, tag)
     }
 
+    /// [`_bog_`](BogOkExt::_bog_) at [`BogLevel::INFO`].
     fn _ibog_<'a>(self, tag: impl Into<Cow<'a, str>>) -> Option<T> {
         self._bog_(BogLevel::INFO, tag)
     }
 
+    /// [`_bog_`](BogOkExt::_bog_) at [`BogLevel::DEBUG`].
     fn _dbog_<'a>(self, tag: impl Into<Cow<'a, str>>) -> Option<T> {
         self._bog_(BogLevel::DEBUG, tag)
     }
 
+    /// [`_bog_`](BogOkExt::_bog_) at [`BogLevel::WARN`].
     fn _wbog_<'a>(self, tag: impl Into<Cow<'a, str>>) -> Option<T> {
         self._bog_(BogLevel::WARN, tag)
     }
 
+    /// [`_bog_`](BogOkExt::_bog_) with an empty tag.
     fn _bog(self, level: BogLevel) -> Option<T> {
         self._bog_(level, "")
     }
 
+    /// [`_ebog_`](BogOkExt::_ebog_) with an empty tag.
     fn _ebog(self) -> Option<T> {
         self._ebog_("")
     }
 
+    /// [`_ebog`](BogOkExt::_ebog), exiting with status 1 on error.
     fn __ebog(self) -> T {
         self._ebog_("").or_exit()
     }
 
+    /// [`_wbog_`](BogOkExt::_wbog_) with an empty tag.
     fn _wbog(self) -> Option<T> {
         self._wbog_("")
     }
 
+    /// [`_dbog_`](BogOkExt::_dbog_) with an empty tag.
     fn _dbog(self) -> Option<T> {
         self._dbog_("")
     }
+    /// [`_ibog_`](BogOkExt::_ibog_) with an empty tag.
     fn _ibog(self) -> Option<T> {
         self._ibog_("")
     }
 }
 
+/// Bog a missing value instead of producing an error.
 #[easy_ext::ext(BogUnwrapExt)]
 pub impl<T> Option<T> {
     /// Unwrap or bog and exit
@@ -485,6 +507,7 @@ pub impl<T> Option<T> {
         self._bog_(BogLevel::ERROR, tag, msg)
     }
 
+    /// Bog at `level` with `tag` and give up the value.
     fn bog_<'a>(
         self,
         level: BogLevel,
@@ -499,12 +522,15 @@ pub impl<T> Option<T> {
             }
         }
     }
+    /// [`bog_`](BogUnwrapExt::bog_) with an empty tag.
     fn bog<'a>(self, level: BogLevel, msg: impl Into<Cow<'a, str>>) -> Option<T> {
         self.bog_(level, "", msg)
     }
+    /// [`bog`](BogUnwrapExt::bog) at [`BogLevel::ERROR`].
     fn ebog<'a>(self, msg: impl Into<Cow<'a, str>>) -> Option<T> {
         self.bog(BogLevel::ERROR, msg)
     }
+    /// Same as [`ebog`](BogUnwrapExt::ebog).
     fn ebog_<'a>(self, msg: impl Into<Cow<'a, str>>) -> Option<T> {
         self.bog(BogLevel::ERROR, msg)
     }

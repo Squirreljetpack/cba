@@ -1,6 +1,7 @@
 use easy_ext::ext;
 use std::fmt::Alignment;
 pub use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
+/// Padding, truncating and splitting helpers on `str`.
 #[ext(StrExt)]
 impl str {
     /// Pad a string with spaces a specified number of times on the left and right.
@@ -48,6 +49,7 @@ impl str {
         }
     }
 
+    /// Cut to at most `max` display width, marking the cut with `…`.
     pub fn ellipsize(&self, max: usize, align: Alignment) -> String {
         let mut used = 0;
         let mut out = Vec::new();
@@ -155,6 +157,7 @@ impl str {
         }
     }
 
+    /// Split once at `delim`, or give the whole string and `""` if it is absent.
     pub fn split_delim(&self, delim: impl Into<Option<char>>) -> [&str; 2] {
         if let Some(c) = delim.into() {
             match self.split_once(c) {
@@ -177,6 +180,7 @@ impl str {
     }
 }
 
+/// Iterator from [`split_escaped_by`](StrExt::split_escaped_by).
 pub struct SplitEscapedBy<'a, F> {
     iter: std::str::Chars<'a>,
     is_sep: F,
@@ -189,6 +193,7 @@ impl<'a, F> SplitEscapedBy<'a, F>
 where
     F: FnMut(char) -> bool,
 {
+    /// Split `s` wherever `is_sep` matches, keeping escaped characters together.
     pub fn new(s: &'a str, is_sep: F) -> Self {
         Self {
             iter: s.chars(),
@@ -273,6 +278,7 @@ pub fn consume_escaped(chars: &mut impl Iterator<Item = char>, out: &mut String)
     }
 }
 
+/// Decode the character after a backslash; `Err(c)` gives back the literal to keep.
 pub fn parse_next_escape<I>(chars: &mut I) -> Result<char, char>
 where
     I: Iterator<Item = char>,

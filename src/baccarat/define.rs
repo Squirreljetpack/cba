@@ -129,8 +129,10 @@ macro_rules! define_collection_wrapper {
         $(, $(#[$field_meta:meta])* $field_vis:vis $field:ident: $ty:ty )* $(,)?
     ) => {
         $(#[$meta])*
+        /// Wrapper around the inner collection, dereferencing to it.
         pub struct $name { // 1. Use `{}` for named fields
             $(#[$inner_meta])*
+            /// The wrapped collection.
             pub inner: $inner, // Give the wrapped path a field name
             $(
                 $(#[$field_meta])*
@@ -139,6 +141,7 @@ macro_rules! define_collection_wrapper {
         }
 
         impl $name {
+            /// Wrapper around a default, empty collection.
             pub fn new() -> Self {
                 $name {
                     inner: <$inner>::new(),
@@ -148,6 +151,7 @@ macro_rules! define_collection_wrapper {
                 }
             }
 
+            /// Wrapper around the given collection.
             pub fn new_from(inner: $inner) -> Self {
                 $name {
                     inner,
@@ -220,6 +224,7 @@ macro_rules! define_collection_wrapper {
 
 // would be kinda neat if rust supported pub ident: value, and value defines the type as well as sets the default.
 #[macro_export]
+/// Define a struct with a `DEFAULT` const and a matching `Default` impl.
 macro_rules! define_const_default {
     (
         $(#[$meta:meta])*

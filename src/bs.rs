@@ -317,6 +317,7 @@ pub fn clear_dir(
     Ok(())
 }
 
+/// Filesystem checks on anything that is `AsRef<Path>`.
 #[easy_ext::ext(FsPathExt)]
 pub impl<T: AsRef<Path>> T {
     /// Check if directory is empty

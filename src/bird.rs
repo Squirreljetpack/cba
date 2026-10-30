@@ -1,5 +1,6 @@
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de::IntoDeserializer};
 
+/// Accept a single value or a list of values for the same field.
 pub mod one_or_many {
     use super::*;
 
@@ -10,6 +11,7 @@ pub mod one_or_many {
         Multiple(Vec<I>),
     }
 
+    /// Deserialize one value or many into a collection.
     pub fn deserialize<'de, D, T, I>(deserializer: D) -> Result<T, D::Error>
     where
         D: Deserializer<'de>,
@@ -22,6 +24,7 @@ pub mod one_or_many {
         }
     }
 
+    /// Serialize a collection holding one element as that element.
     pub fn serialize<T, S>(value: T, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -45,11 +48,13 @@ pub mod one_or_many {
     }
 }
 
+/// Convert through the string form of a type.
 pub mod through_string {
     use serde::{Deserialize, Deserializer, Serializer, de};
     use std::fmt::Display;
     use std::str::FromStr;
 
+    /// Serialize as the `Display` string.
     pub fn serialize<T, S>(value: &T, serializer: S) -> Result<S::Ok, S::Error>
     where
         T: Display,
@@ -58,6 +63,7 @@ pub mod through_string {
         serializer.serialize_str(&value.to_string())
     }
 
+    /// Deserialize by parsing the string with `FromStr`.
     pub fn deserialize<'de, T, D>(deserializer: D) -> Result<T, D::Error>
     where
         T: FromStr,
@@ -69,9 +75,11 @@ pub mod through_string {
     }
 }
 
+/// Read `""` as `None` for optional fields.
 pub mod empty_string_as_none {
     use serde::{Deserialize, Deserializer, Serialize, Serializer, de::IntoDeserializer};
 
+    /// `Some` as its own value, `None` as `""`.
     pub fn serialize<T, S>(value: &Option<T>, serializer: S) -> Result<S::Ok, S::Error>
     where
         T: Serialize,
@@ -84,6 +92,7 @@ pub mod empty_string_as_none {
         }
     }
 
+    /// Missing or empty input gives `None`.
     pub fn deserialize<'de, D, T>(deserializer: D) -> Result<Option<T>, D::Error>
     where
         D: Deserializer<'de>,
@@ -101,9 +110,11 @@ pub mod empty_string_as_none {
     }
 }
 
+/// Read any value into `Err`, for fields typed as `Result`.
 pub mod result_as_err {
     use serde::{Deserialize, Deserializer};
 
+    /// Wrap the deserialized value in `Err`.
     pub fn deserialize<'de, D, E>(d: D) -> Result<Result<(), E>, D::Error>
     where
         D: Deserializer<'de>,
@@ -113,6 +124,7 @@ pub mod result_as_err {
     }
 }
 
+/// Deserialize through an intermediate type and a transform.
 pub mod transform {
     pub use super::*;
 
@@ -132,6 +144,7 @@ pub mod transform {
         let s = transform(s);
         T::deserialize(serde::de::IntoDeserializer::into_deserializer(s))
     }
+    /// [`deserialize_with_transform`] for optional fields.
     pub fn deserialize_option_with_transform<'de, D, T, F, I, S>(
         deserializer: D,
         transform: F,
@@ -185,21 +198,25 @@ pub mod transform {
         |s: String| s.to_ascii_uppercase()
     );
     defn_transform!(
+        /// Deserialize from a string after camel-case normalization.
         camelcase_normalized,
         deserialize_with_transform,
         |s: String| camel_case(s)
     );
     defn_transform!(
+        /// Deserialize `Option<T>` from a plain string.
         as_option,
         deserialize_option_with_transform => Option<T>,
         |s: String| s
     );
     defn_transform!(
+        /// Deserialize `Option<T>` from a string after applying uppercase.
         uppercase_normalized_option,
         deserialize_option_with_transform => Option<T>,
         |s: String| s.to_ascii_uppercase()
     );
     defn_transform!(
+        /// Deserialize `Option<T>` from a string after camel-case normalization.
         camelcase_normalized_option,
         deserialize_option_with_transform => Option<T>,
         |s: String| camel_case(s)

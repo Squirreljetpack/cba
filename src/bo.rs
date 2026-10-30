@@ -164,10 +164,13 @@ use std::io::{BufRead, Read};
 
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
+/// Failure while mapping chunks read from a reader.
 pub enum MapReaderError<E> {
     #[error("Failed to read chunk {0}: {1}")]
+    /// The chunk could not be read.
     ChunkError(usize, std::io::Error),
     #[error("Aborted: {0}")]
+    /// The mapping closure aborted with this error.
     Custom(#[from] E),
 }
 

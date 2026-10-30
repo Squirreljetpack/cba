@@ -328,6 +328,7 @@ pub fn split_whitespace_preserve_single_quotes(s: &str) -> Vec<String> {
     out
 }
 
+/// Join tokens, single-quoting the ones holding whitespace or a quote.
 pub fn join_with_single_quotes(tokens: &[String]) -> String {
     tokens
         .iter()
@@ -393,6 +394,7 @@ mod single_quote_tests {
     }
 }
 
+/// Split on `delimiter`, keeping escaped delimiters (`\###`) in the text.
 pub fn split_on_unescaped_delimiter(s: &str, delimiter: &str) -> Vec<String> {
     let mut result = Vec::new();
     let mut current = String::new();
@@ -429,6 +431,7 @@ pub fn split_on_unescaped_delimiter(s: &str, delimiter: &str) -> Vec<String> {
     result
 }
 
+/// Split on `delimiter`, where a doubled delimiter stands for a literal one.
 pub fn split_on_delimiter_with_doubled_escape(s: &str, delimiter: char) -> Vec<String> {
     let mut result = Vec::new();
     let mut current = String::new();

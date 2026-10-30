@@ -1,3 +1,4 @@
+/// Float to index conversions.
 #[easy_ext::ext(Float32Ext)]
 pub impl f32 {
     /// Truncate to usize.
@@ -11,6 +12,7 @@ pub impl f32 {
     }
 }
 
+/// Counter arithmetic that reports whether it succeeded.
 #[easy_ext::ext(UsizeExt)]
 pub impl usize {
     /// Saturating subtract with lower bound 0.

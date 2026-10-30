@@ -1,5 +1,7 @@
+/// Log level filters chosen from the environment or from CLI verbosity flags.
 pub mod level_filter {
     use log::LevelFilter;
+    /// Filter from the `RUST_LOG` level name, defaulting to `Info`.
     pub fn from_env() -> LevelFilter {
         match std::env::var("RUST_LOG")
             .ok()

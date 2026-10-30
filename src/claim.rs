@@ -32,7 +32,12 @@ pub enum ClaimPolicy<'a> {
     /// Fails if the exact path already exists.
     Strict,
     /// Finds the first free `<stem><left>N<right>[.<ext>]` sibling.
-    Suffix { left: &'a str, right: &'a str },
+    Suffix {
+        /// Placed before the number, after the stem.
+        left: &'a str,
+        /// Placed after the number, before the extension.
+        right: &'a str,
+    },
     /// Reuses/overwrites the target path even if it already exists.
     Ignore,
 }
@@ -302,6 +307,7 @@ fn rollback(path: &Path, levels: usize) {
 pub enum ClaimError {
     /// Blocked, and no alternative was permitted (or all were taken).
     Taken,
+    /// The filesystem refused to create the reservation.
     Io(io::Error),
 }
 
