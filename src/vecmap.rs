@@ -90,19 +90,17 @@ impl<K, V> Default for VecMap<K, V> {
 
 impl<K: Eq, V> VecMap<K, V> {
     /// Whether the map contains `key`.
-    pub fn contains_key<Q: ?Sized>(&self, key: &Q) -> bool
+    pub fn contains_key<Q: ?Sized + Eq>(&self, key: &Q) -> bool
     where
         K: Borrow<Q>,
-        Q: Eq,
     {
         self.keys.iter().any(|k| k.borrow() == key)
     }
 
     /// The value of `key`, if present.
-    pub fn get<Q: ?Sized>(&self, key: &Q) -> Option<&V>
+    pub fn get<Q: ?Sized + Eq>(&self, key: &Q) -> Option<&V>
     where
         K: Borrow<Q>,
-        Q: Eq,
     {
         self.keys
             .iter()
@@ -111,10 +109,9 @@ impl<K: Eq, V> VecMap<K, V> {
     }
 
     /// Mutable reference to the value of `key`, if present.
-    pub fn get_mut<Q: ?Sized>(&mut self, key: &Q) -> Option<&mut V>
+    pub fn get_mut<Q: ?Sized + Eq>(&mut self, key: &Q) -> Option<&mut V>
     where
         K: Borrow<Q>,
-        Q: Eq,
     {
         self.keys
             .iter()
@@ -155,10 +152,9 @@ impl<K: Eq, V> VecMap<K, V> {
     }
 
     /// Remove the entry of `key`, returning its value when present.
-    pub fn remove<Q: ?Sized>(&mut self, key: &Q) -> Option<V>
+    pub fn remove<Q: ?Sized + Eq>(&mut self, key: &Q) -> Option<V>
     where
         K: Borrow<Q>,
-        Q: Eq,
     {
         if let Some(i) = self.keys.iter().position(|k| k.borrow() == key) {
             self.keys.remove(i);
@@ -203,7 +199,7 @@ impl<K, V> IntoIterator for VecMap<K, V> {
     type IntoIter = std::iter::Zip<std::vec::IntoIter<K>, std::vec::IntoIter<V>>;
 
     fn into_iter(self) -> Self::IntoIter {
-        self.keys.into_iter().zip(self.values.into_iter())
+        self.keys.into_iter().zip(self.values)
     }
 }
 

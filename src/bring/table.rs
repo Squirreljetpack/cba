@@ -16,9 +16,15 @@ where
     rows: Vec<[U; N]>,
     widths: [usize; N],
     sep: Option<String>,
-    header_fmter: Option<Box<dyn Fn(String, usize) -> String>>,
-    cell_fmter: Option<Box<dyn Fn(String, [usize; 2]) -> String>>,
+    header_fmter: Option<HeaderFmt>,
+    cell_fmter: Option<CellFmt>,
 }
+
+/// Header formatter: `(text, column width) -> formatted text`.
+type HeaderFmt = Box<dyn Fn(String, usize) -> String>;
+
+/// Cell formatter: `(text, [column width, row]) -> formatted text`.
+type CellFmt = Box<dyn Fn(String, [usize; 2]) -> String>;
 
 impl<T, U, const N: usize> TableBuilder<T, U, StdoutLock<'static>, N>
 where
@@ -113,7 +119,7 @@ where
         // print header
         if let Some(hdr) = self.header.as_ref() {
             let mut s = String::new();
-            for (i, val) in hdr.into_iter().enumerate() {
+            for (i, val) in hdr.iter().enumerate() {
                 let mut aligned = align(i, val.to_string());
                 if let Some(ref f) = self.header_fmter {
                     aligned = f(aligned, i);
@@ -131,7 +137,7 @@ where
         // print rows
         for (r_idx, row) in self.rows.iter().enumerate() {
             let mut s = String::new();
-            for (i, val) in row.into_iter().enumerate() {
+            for (i, val) in row.iter().enumerate() {
                 let mut aligned = align(i, val.to_string());
                 if let Some(ref f) = self.cell_fmter {
                     aligned = f(aligned, [r_idx, i]);

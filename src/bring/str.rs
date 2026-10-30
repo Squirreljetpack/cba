@@ -27,12 +27,12 @@ impl str {
 
         match align {
             Alignment::Left => {
-                s.extend(std::iter::repeat(' ').take(pad));
+                s.extend(std::iter::repeat_n(' ', pad));
                 s
             }
             Alignment::Right => {
                 let mut out = String::new();
-                out.extend(std::iter::repeat(' ').take(pad));
+                out.extend(std::iter::repeat_n(' ', pad));
                 out.push_str(&s);
                 out
             }
@@ -40,9 +40,9 @@ impl str {
                 let right = pad / 2;
                 let left = pad - right;
                 let mut out = String::new();
-                out.extend(std::iter::repeat(' ').take(left));
+                out.extend(std::iter::repeat_n(' ', left));
                 out.push_str(&s);
-                out.extend(std::iter::repeat(' ').take(right));
+                out.extend(std::iter::repeat_n(' ', right));
                 out
             }
         }
@@ -124,15 +124,11 @@ impl str {
                 let mut used_width = ellipsis_width;
 
                 // Alternatingly pull from the front and back
-                loop {
-                    if let Some(l_ch) = chars_iter.next() {
-                        let l_width = l_ch.width().unwrap_or(0);
-                        if used_width + l_width <= max {
-                            left_chars.push(l_ch);
-                            used_width += l_width;
-                        } else {
-                            break;
-                        }
+                while let Some(l_ch) = chars_iter.next() {
+                    let l_width = l_ch.width().unwrap_or(0);
+                    if used_width + l_width <= max {
+                        left_chars.push(l_ch);
+                        used_width += l_width;
                     } else {
                         break;
                     }
@@ -177,7 +173,7 @@ impl str {
     where
         F: FnMut(char) -> bool,
     {
-        SplitEscapedBy::new(&self, is_sep)
+        SplitEscapedBy::new(self, is_sep)
     }
 }
 
@@ -216,7 +212,7 @@ where
             return None;
         }
 
-        while let Some(ch) = self.iter.next() {
+        for ch in self.iter.by_ref() {
             if self.escaped {
                 // preserve escapes of non_splitting characters
                 if !(self.is_sep)(ch) {
@@ -297,11 +293,10 @@ where
         'x' => {
             let hi = chars.next();
             let lo = chars.next();
-            if let (Some(hi), Some(lo)) = (hi, lo) {
-                if let Ok(v) = u8::from_str_radix(&format!("{hi}{lo}"), 16) {
+            if let (Some(hi), Some(lo)) = (hi, lo)
+                && let Ok(v) = u8::from_str_radix(&format!("{hi}{lo}"), 16) {
                     return Ok(v as char);
                 }
-            }
             Err('x')
         }
         'u' => {
@@ -313,11 +308,10 @@ where
                     }
                     hex.push(c);
                 }
-                if let Ok(v) = u32::from_str_radix(&hex, 16) {
-                    if let Some(c) = char::from_u32(v) {
+                if let Ok(v) = u32::from_str_radix(&hex, 16)
+                    && let Some(c) = char::from_u32(v) {
                         return Ok(c);
                     }
-                }
                 return Err('u');
             }
             Err('u')

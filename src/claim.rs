@@ -138,7 +138,7 @@ impl FileClaim {
         let path = &self.path;
 
         // 3. Attempt the rename
-        match fs::rename(source, &path) {
+        match fs::rename(source, path) {
             Ok(()) => Replaced::Success,
             Err(e) => {
                 #[cfg(windows)]
@@ -405,8 +405,8 @@ pub fn reserve_file(desired: &Path, policy: ClaimPolicy) -> Result<FileClaim, Cl
 /// Parent directories must already exist — use [`reserve_dir_all`] when
 /// they may not, or [`std::fs::create_dir_all`] on the parent yourself.
 pub fn reserve_dir(desired: &Path, policy: ClaimPolicy) -> Result<DirClaim, ClaimError> {
-    if policy == ClaimPolicy::Ignore {
-        if let Ok(md) = fs::symlink_metadata(desired) {
+    if policy == ClaimPolicy::Ignore
+        && let Ok(md) = fs::symlink_metadata(desired) {
             if md.is_dir() {
                 return Ok(DirClaim {
                     path: desired.to_path_buf(),
@@ -420,7 +420,6 @@ pub fn reserve_dir(desired: &Path, policy: ClaimPolicy) -> Result<DirClaim, Clai
                 )));
             }
         }
-    }
 
     if let Err(e) = fs::create_dir(desired) {
         if e.kind() != io::ErrorKind::AlreadyExists {

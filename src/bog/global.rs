@@ -3,7 +3,6 @@ use std::{
     fmt::{self, Display},
     io::{Write, stderr, stdout},
     sync::Mutex,
-    u8,
 };
 
 use crate::bait::{MutexExt, OptionExt};
@@ -73,7 +72,7 @@ impl GLOBAL_BOGGER_STRUCT {
             // Format message with prefix and suffix
             let mut formatted = if !self.prefix.is_empty() {
                 let mut prefixed_msg = self.prefix.clone();
-                prefixed_msg.push_str(&msg);
+                prefixed_msg.push_str(msg);
                 self.formatter.format(level, effective_tag, &prefixed_msg)
             } else {
                 self.formatter.format(level, effective_tag, msg)
@@ -183,6 +182,12 @@ impl BogContext {
     pub fn log(mut self, log: Option<bool>) -> Self {
         self.log = log;
         self
+    }
+}
+
+impl Default for BogContext {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

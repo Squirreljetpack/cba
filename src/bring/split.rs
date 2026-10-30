@@ -30,18 +30,14 @@ pub fn split_whitespace_preserving_nesting(
         match c {
             '\\' => {
                 if let Some(&(_, next)) = chars.peek() {
-                    if nesting == 0
+                    let escaped = (nesting == 0
                         && ([left, right].contains(&next)
                             || consuming.is_some_and(|x| x.contains(&next))
-                            || next.is_whitespace())
-                    {
-                        token.push(next);
-                        chars.next();
-                        continue;
-                    } else if (in_consuming_delimiter
-                        && consuming.is_some_and(|x| x.contains(&next)))
-                        || (!in_consuming_delimiter && [left, right].contains(&next))
-                    {
+                            || next.is_whitespace()))
+                        || (in_consuming_delimiter
+                            && consuming.is_some_and(|x| x.contains(&next)))
+                        || (!in_consuming_delimiter && [left, right].contains(&next));
+                    if escaped {
                         token.push(next);
                         chars.next();
                         continue;

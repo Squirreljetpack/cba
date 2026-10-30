@@ -17,7 +17,7 @@ mod test {
     fn show_fg_bogger() {
         init_bogger(true, false);
         // DEBUG messages
-        dbog!("DEBUG message: {}", 3.14159);
+        dbog!("DEBUG message: {}", 1.2345);
         dbog!("val"; "DEBUG values: x={}, y={}", 10, 20);
 
         // INFO messages
@@ -48,7 +48,7 @@ mod test {
     fn show_bg_bogger() {
         init_bogger(false, true);
         // DEBUG messages
-        dbog!("DEBUG message: {}", 3.14159);
+        dbog!("DEBUG message: {}", 1.2345);
         dbog!("val"; "DEBUG values: x={}, y={}", 10, 20);
 
         // INFO messages

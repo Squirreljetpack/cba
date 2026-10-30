@@ -2,7 +2,7 @@
 
 #[derive(Clone, Copy, Debug)]
 pub enum BogLevel {
-    ///
+    /// Neutral message carrying no severity, used for ancillary output.
     NOTE,
     ERROR,
     WARN,
@@ -92,7 +92,7 @@ impl BogFmter for Fg {
             s.push_str(tag);
         };
 
-        s.push_str("]");
+        s.push(']');
         s.push_str(&style.render_reset().to_string());
         s
     }
@@ -156,7 +156,7 @@ impl BogFmter for Bg {
         } else if matches!(level, BogLevel::EMPTY) {
             start.push_str(tag);
         };
-        start.push_str(" ");
+        start.push(' ');
         start.push_str(&style.render_reset().to_string());
 
         start

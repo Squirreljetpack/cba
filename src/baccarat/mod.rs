@@ -94,33 +94,6 @@ macro_rules! concat_ {
     }};
 }
 
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn writes_to_buffer() {
-        let mut buf = Vec::new();
-
-        prints!(
-            "hello", " world";
-            "line 2";
-            "a", "b", "c" => &mut buf
-        );
-
-        assert_eq!(
-            std::str::from_utf8(&buf).unwrap(),
-            "hello world\nline 2\nabc\n"
-        );
-
-        let mut buf = Vec::new();
-
-        prints!(
-            "hello", " world" => &mut buf
-        );
-
-        assert_eq!(std::str::from_utf8(&buf).unwrap(), "hello world\n");
-    }
-}
-
 // ------------- DEBUG -------------
 
 /// dbg!/log::debug! and return the value.
@@ -231,29 +204,29 @@ macro_rules! _eprint {
 /// use std::fs::File;
 ///
 /// pub fn check_should_template(path: &std::path::Path) -> bool {
-/// 	let err_prefix = format!("Failed to read {path:?} for templating");
-/// 	let file = unwrap!(File::open(path).ok());
+///     let err_prefix = format!("Failed to read {path:?} for templating");
+///     let file = unwrap!(File::open(path).ok());
 ///
-/// 	// process file
+///     // process file
 ///
-/// 	true
+///     true
 /// }
 /// ```
 ///
 /// A closure in the second argument unwraps Result:
 /// ```rust,ignore
 /// for binname in list {
-/// 	let ActionBin {
+///     let ActionBin {
 ///             name,
 ///             alias,
 ///             ..
-/// 	} = unwrap!(
-///     	binname.parse();
-///     	|e| { err_count += 1; ebog!("Scan"; "Failed to parse filename of {}: {e}", path.to_string_lossy()) };
-///     	continue
-/// 	);
+///     } = unwrap!(
+///         binname.parse();
+///         |e| { err_count += 1; ebog!("Scan"; "Failed to parse filename of {}: {e}", path.to_string_lossy()) };
+///         continue
+///     );
 ///
-///	    println!("{name}");
+///        println!("{name}");
 /// }
 /// ```
 #[macro_export]
@@ -319,4 +292,32 @@ macro_rules! unwrap {
             }
         }
     };
+}
+
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn writes_to_buffer() {
+        let mut buf = Vec::new();
+
+        prints!(
+            "hello", " world";
+            "line 2";
+            "a", "b", "c" => &mut buf
+        );
+
+        assert_eq!(
+            std::str::from_utf8(&buf).unwrap(),
+            "hello world\nline 2\nabc\n"
+        );
+
+        let mut buf = Vec::new();
+
+        prints!(
+            "hello", " world" => &mut buf
+        );
+
+        assert_eq!(std::str::from_utf8(&buf).unwrap(), "hello world\n");
+    }
 }

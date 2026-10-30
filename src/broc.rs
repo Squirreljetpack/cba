@@ -151,7 +151,7 @@ impl Command {
             .stdout(Stdio::piped())
             .stderr(Stdio::null())
             .spawn()
-            .prefix(&format!("Failed to spawn: {}", self.display()))?;
+            .prefix(format!("Failed to spawn: {}", self.display()))?;
 
         match child.stdout.take() {
             Some(stdout) => Ok((child, stdout)),
@@ -170,7 +170,7 @@ impl Command {
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .output()
-            .prefix(&format!("Failed to spawn: {}", self.display()))?;
+            .prefix(format!("Failed to spawn: {}", self.display()))?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
@@ -240,7 +240,7 @@ impl Command {
     pub fn _spawn(&mut self) -> Option<Child> {
         trace!("Spawning: {self:?}");
         self.spawn()
-            .prefix(&format!("Could not spawn: {}", self.display()))
+            .prefix(format!("Could not spawn: {}", self.display()))
             ._elog()
     }
 }
@@ -287,18 +287,18 @@ fn shell_quote_impl(s: &str) -> String {
             }
 
             quoted.push('"');
-            quoted.into()
+            quoted
         } else {
             // PowerShell: wrap in single quotes, escape internal single quotes by doubling them.
             // e.g., C:\Path's "With" Space -> 'C:\Path''s "With" Space'
             let escaped = s.replace('\'', "''");
-            format!("'{}'", escaped).into()
+            format!("'{}'", escaped)
         }
     } else if cfg!(unix) {
         // Unix shells: wrap in single quotes, escape internal single quotes
         // e.g., /path/it's/here -> '/path/it'\''s/here'
         let escaped = s.replace('\'', r"'\''");
-        format!("'{}'", escaped).into()
+        format!("'{}'", escaped)
     } else {
         s.into()
     }
