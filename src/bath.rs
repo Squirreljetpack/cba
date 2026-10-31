@@ -76,6 +76,21 @@ pub impl<T: AsRef<Path>> T {
         false
     }
 
+    /// Whether the path's textual form ends with a directory separator.
+    ///
+    /// [`Path::components`] drops a trailing separator, so [`abs`](Self::abs)
+    /// and [`normalize`](Self::normalize) erase the "write into this
+    /// directory" signal carried by user input. Read the intent with this
+    /// before normalizing.
+    fn ends_in_separator(&self) -> bool {
+        self.as_ref()
+            .to_string_lossy()
+            .chars()
+            .next_back()
+            .is_some_and(std::path::is_separator)
+    }
+
+
     /// Prepend base to current path then normalize.
     ///
     /// # Example
@@ -180,13 +195,14 @@ macro_rules! expr_as_path_fn {
 use std::borrow::Cow;
 use std::ffi::{OsStr, OsString};
 
-/// not sure if as_encoded_bytes is better
+/// justification: as_encoded_bytes is not reliable for serialization
 #[cfg(unix)]
 pub fn os_str_to_bytes(string: &OsStr) -> Cow<'_, [u8]> {
     use std::os::unix::ffi::OsStrExt;
     Cow::Borrowed(string.as_bytes())
 }
 
+/// justification: as_encoded_bytes is not reliable for serialization
 #[cfg(windows)]
 pub fn os_str_to_bytes(string: &OsStr) -> Cow<'_, [u8]> {
     use std::os::windows::ffi::OsStrExt;
