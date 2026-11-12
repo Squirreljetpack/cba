@@ -18,11 +18,13 @@ which = "8.0"
 anstyle = "1.0"
 anstream = "1.0"
 tempfile = "3.0"
+dirs = { version = "7", optional = true }
 
 [features]
 bring = ["dep:unicode-width"] # string
 blaim = []
 serde = ["dep:serde"]
+dirs = ["dep:dirs"] # platform directories
 
 [lib]
   name = "cba"

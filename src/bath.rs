@@ -146,6 +146,24 @@ pub impl<T: AsRef<Path>> T {
     }
 }
 
+/// Expands `~` at the start of a path or glob pattern to the user's home directory.
+#[cfg(feature = "dirs")]
+pub fn expand_tilde(pattern: &str) -> String {
+    let Some(rest) = pattern.strip_prefix('~') else {
+        return pattern.to_string();
+    };
+
+    if !rest.is_empty() && !rest.starts_with(['/', '\\']) {
+        return pattern.to_string();
+    }
+
+    let Some(home) = dirs::home_dir() else {
+        return pattern.to_string();
+    };
+
+    format!("{}{}", home.display(), rest)
+}
+
 /// Find the root the current directory resides on
 /// ```
 /// use std::path::PathBuf;

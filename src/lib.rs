@@ -1,21 +1,24 @@
 //! A collection of utilities which wrap common tasks needed in cli utilities
-//! Results/Options are downgraded to Options/bools by handling errors within the wrappers using [`bog`].
 //!
-//! # Error handling strategies:
-//! ### Macros
-//! Unwrap errors from Result/Option with (get/unwrap_or) and immediately return
-//! ### BogOkExt
-//! Downgrade errors to options by bogging the error
-//! ### BogUnwrapExt
-//! Unwrap infallible errors or bog and exit process
-//! ### Misc
-//! A prefix can be added to the error with prefix_err
+//! # Logging & Bogging Quick Reference
 //!
+//! ### Standalone Macros
+//! - `wbog!("msg")` / `wbog!("tag"; "msg")`: log at `WARN` to stderr and `log::warn!`.
+//! - `ebog!("msg")` / `ebog!("tag"; "msg")`: log at `ERROR` to stderr and `log::error!`.
+//! - `ibog!`, `dbog!`: `INFO` and `DEBUG`.
 //!
-//! # Additional
-//! These functions are mostly not composable
+//! ### Fallible Chaining on `Result<T, E: Display>` (`use cba::bog::BogOkExt;`)
+//! - `res._wbog()`: logs `Err` as `WARN`, returns `Option<T>` (`Some(val)` or `None`).
+//! - `res._ebog()`: logs `Err` as `ERROR`, returns `Option<T>`.
+//! - `res.__ebog()`: logs `Err` as `ERROR`, exits process with code 1, returns `T`.
+//!
+//! ### Fallible Chaining on `Option<T>` (`use cba::bog::BogUnwrapExt;`)
+//! - `opt._ebog("msg")`: if `None`, logs `"msg"` as `ERROR` and exits process with code 1, returns `T`.
+//! - `opt.ebog("msg")`: if `None`, logs `"msg"` as `ERROR`, returns `Option<T>` (`None`).
 
 pub mod bath; // Path manipulation
+#[cfg(feature = "dirs")]
+pub mod birs; // Platform application directories
 #[cfg(feature = "blaim")]
 pub mod blaim; // Atomic path reservation
 pub mod bo; // File read/write
