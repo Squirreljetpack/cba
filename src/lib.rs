@@ -16,8 +16,8 @@
 //! These functions are mostly not composable
 
 pub mod bath; // Path manipulation
-#[cfg(feature = "claim")]
-pub mod claim; // Atomic path reservation
+#[cfg(feature = "blaim")]
+pub mod blaim; // Atomic path reservation
 pub mod bo; // File read/write
 
 pub mod broc;

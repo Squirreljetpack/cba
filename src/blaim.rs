@@ -965,7 +965,7 @@ mod tests {
 
     fn tmp(name: &str) -> PathBuf {
         let dir = std::env::temp_dir().join(format!(
-            "cba-claim-{name}-{}-{}",
+            "cba-blaim-{name}-{}-{}",
             std::process::id(),
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
