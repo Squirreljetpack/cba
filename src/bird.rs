@@ -1,15 +1,20 @@
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de::IntoDeserializer};
 
 /// Accept a single value or a list of values for the same field.
+///
+/// Sequences always deserialize as a collection of `I`, so `I` must
+/// deserialize from a non-sequence value.
 pub mod one_or_many {
-    use super::*;
+    use std::marker::PhantomData;
 
-    #[derive(Deserialize)]
-    #[serde(untagged)]
-    enum Helper<I> {
-        Single(I),
-        Multiple(Vec<I>),
-    }
+    use serde::de::{
+        self, EnumAccess, MapAccess, SeqAccess, Visitor,
+        value::{
+            BytesDeserializer, EnumAccessDeserializer, MapAccessDeserializer, SeqAccessDeserializer,
+        },
+    };
+
+    use super::*;
 
     /// Deserialize one value or many into a collection.
     pub fn deserialize<'de, D, T, I>(deserializer: D) -> Result<T, D::Error>
@@ -18,10 +23,105 @@ pub mod one_or_many {
         T: FromIterator<I>,
         I: Deserialize<'de>,
     {
-        match Helper::deserialize(deserializer)? {
-            Helper::Single(item) => Ok(std::iter::once(item).collect()),
-            Helper::Multiple(items) => Ok(items.into_iter().collect()),
+        fn single<I, T: FromIterator<I>, E>(res: Result<I, E>) -> Result<T, E> {
+            res.map(|item| std::iter::once(item).collect())
         }
+
+        struct OneOrManyVisitor<T, I>(PhantomData<(T, I)>);
+
+        macro_rules! forward_single {
+            ($($method:ident($ty:ty)),* $(,)?) => {
+                $(
+                    fn $method<E>(self, v: $ty) -> Result<Self::Value, E>
+                    where
+                        E: de::Error,
+                    {
+                        single(I::deserialize(v.into_deserializer()))
+                    }
+                )*
+            };
+        }
+
+        impl<'de, T, I> Visitor<'de> for OneOrManyVisitor<T, I>
+        where
+            T: FromIterator<I>,
+            I: Deserialize<'de>,
+        {
+            type Value = T;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("a single value or a sequence of values")
+            }
+
+            forward_single!(
+                visit_bool(bool),
+                visit_i64(i64),
+                visit_u64(u64),
+                visit_f64(f64),
+                visit_char(char),
+                visit_str(&str),
+                visit_string(String),
+            );
+
+            fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                single(I::deserialize(BytesDeserializer::new(v)))
+            }
+
+            fn visit_unit<E>(self) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                single(I::deserialize(().into_deserializer()))
+            }
+
+            fn visit_none<E>(self) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                single(I::deserialize(().into_deserializer()))
+            }
+
+            fn visit_some<D2>(self, deserializer: D2) -> Result<Self::Value, D2::Error>
+            where
+                D2: Deserializer<'de>,
+            {
+                single(I::deserialize(deserializer))
+            }
+
+            fn visit_newtype_struct<D2>(self, deserializer: D2) -> Result<Self::Value, D2::Error>
+            where
+                D2: Deserializer<'de>,
+            {
+                single(I::deserialize(deserializer))
+            }
+
+            fn visit_map<A>(self, map: A) -> Result<Self::Value, A::Error>
+            where
+                A: MapAccess<'de>,
+            {
+                single(I::deserialize(MapAccessDeserializer::new(map)))
+            }
+
+            fn visit_enum<A>(self, data: A) -> Result<Self::Value, A::Error>
+            where
+                A: EnumAccess<'de>,
+            {
+                single(I::deserialize(EnumAccessDeserializer::new(data)))
+            }
+
+            fn visit_seq<A>(self, seq: A) -> Result<Self::Value, A::Error>
+            where
+                A: SeqAccess<'de>,
+            {
+                Vec::<I>::deserialize(SeqAccessDeserializer::new(seq))
+                    .map(|items| items.into_iter().collect())
+            }
+        }
+
+        deserializer.deserialize_any(OneOrManyVisitor(PhantomData))
     }
 
     /// Serialize a collection holding one element as that element.
