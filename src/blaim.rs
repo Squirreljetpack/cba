@@ -19,7 +19,10 @@
 
 use std::fs;
 use std::io;
+#[cfg(unix)]
 use std::os::unix::fs::MetadataExt;
+#[cfg(windows)]
+use std::os::windows::fs::MetadataExt;
 use std::path::{Path, PathBuf};
 
 /// How many suffixed alternatives to try before giving up
@@ -143,7 +146,7 @@ impl FileClaim {
         let path = &self.path;
 
         // 3. Attempt the rename
-        match fs::rename(source, path) {
+        match fs::rename(source, &path) {
             Ok(()) => Replaced::Success,
             Err(e) => {
                 #[cfg(windows)]
