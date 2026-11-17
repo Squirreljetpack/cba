@@ -71,8 +71,8 @@ fn symlink_destination(path: &Path) -> PathBuf {
 
     let mut current = path.to_path_buf();
     for _ in 0..MAX_DEPTH {
-        let is_symlink = fs::symlink_metadata(&current)
-            .is_ok_and(|metadata| metadata.file_type().is_symlink());
+        let is_symlink =
+            fs::symlink_metadata(&current).is_ok_and(|metadata| metadata.file_type().is_symlink());
         if !is_symlink {
             break;
         }
@@ -82,10 +82,17 @@ fn symlink_destination(path: &Path) -> PathBuf {
         current = if target.is_absolute() {
             target
         } else {
-            current.parent().unwrap_or_else(|| Path::new(".")).join(target)
+            current
+                .parent()
+                .unwrap_or_else(|| Path::new("."))
+                .join(target)
         };
     }
-    if current.exists() { current } else { path.to_path_buf() }
+    if current.exists() {
+        current
+    } else {
+        path.to_path_buf()
+    }
 }
 
 #[cfg(test)]
@@ -120,7 +127,12 @@ mod tests {
         })
         .unwrap();
 
-        assert!(fs::symlink_metadata(&link).unwrap().file_type().is_symlink());
+        assert!(
+            fs::symlink_metadata(&link)
+                .unwrap()
+                .file_type()
+                .is_symlink()
+        );
         assert_eq!(fs::read_to_string(&target).unwrap(), "new");
     }
 
@@ -137,7 +149,12 @@ mod tests {
         })
         .unwrap();
 
-        assert!(!fs::symlink_metadata(&link).unwrap().file_type().is_symlink());
+        assert!(
+            !fs::symlink_metadata(&link)
+                .unwrap()
+                .file_type()
+                .is_symlink()
+        );
         assert_eq!(fs::read_to_string(&link).unwrap(), "new");
         assert!(!target.exists());
     }

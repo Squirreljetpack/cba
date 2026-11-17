@@ -285,7 +285,10 @@ mod tests {
     fn iteration_preserves_insertion_order() {
         let map: VecMap<_, _> = [(1, "a"), (2, "b"), (3, "c")].into_iter().collect();
         assert_eq!(map.keys().copied().collect::<Vec<_>>(), vec![1, 2, 3]);
-        assert_eq!(map.values().copied().collect::<Vec<_>>(), vec!["a", "b", "c"]);
+        assert_eq!(
+            map.values().copied().collect::<Vec<_>>(),
+            vec!["a", "b", "c"]
+        );
         assert_eq!(
             map.iter().map(|(k, v)| (*k, *v)).collect::<Vec<_>>(),
             vec![(1, "a"), (2, "b"), (3, "c")]

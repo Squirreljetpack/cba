@@ -34,8 +34,7 @@ pub fn split_whitespace_preserving_nesting(
                         && ([left, right].contains(&next)
                             || consuming.is_some_and(|x| x.contains(&next))
                             || next.is_whitespace()))
-                        || (in_consuming_delimiter
-                            && consuming.is_some_and(|x| x.contains(&next)))
+                        || (in_consuming_delimiter && consuming.is_some_and(|x| x.contains(&next)))
                         || (!in_consuming_delimiter && [left, right].contains(&next));
                     if escaped {
                         token.push(next);

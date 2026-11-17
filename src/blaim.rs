@@ -115,7 +115,7 @@ impl FileClaim {
                 && handle_meta.modified().ok() == path_meta.modified().ok())
         }
     }
-    
+
     /// Moves `source` onto the claimed name, replacing the placeholder.
     /// See [`DirClaim::try_replace`] for the shared semantics.
     pub fn try_replace(self, source: impl AsRef<Path>) -> Replaced<Self> {
@@ -175,7 +175,6 @@ impl FileClaim {
             }
         }
     }
-
 
     /// Undoes the reservation: removes the claimed leaf — only while it
     /// is still zero-length — and then unwinds the ancestor levels it
@@ -315,10 +314,7 @@ pub enum ClaimError {
 }
 
 impl std::fmt::Display for ClaimError {
-    fn fmt(
-        &self,
-        f: &mut std::fmt::Formatter<'_>,
-    ) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             ClaimError::Taken => write!(f, "destination is already taken"),
             ClaimError::Io(e) => write!(f, "{e}"),
@@ -371,6 +367,14 @@ pub fn reserve_file(desired: &Path, policy: ClaimPolicy) -> Result<FileClaim, Cl
         match fs::OpenOptions::new().write(true).create_new(true).open(p) {
             Ok(file) => Ok(Some(file)),
             Err(e) if e.kind() == io::ErrorKind::AlreadyExists => Ok(None),
+            // Windows cannot open a directory as a file, so a taken name comes
+            // back as access-denied instead of already-exists.
+            Err(e)
+                if e.kind() == io::ErrorKind::PermissionDenied
+                    && fs::symlink_metadata(p).is_ok() =>
+            {
+                Ok(None)
+            }
             Err(e) => Err(e),
         }
     };
@@ -415,20 +419,21 @@ pub fn reserve_file(desired: &Path, policy: ClaimPolicy) -> Result<FileClaim, Cl
 /// they may not, or [`std::fs::create_dir_all`] on the parent yourself.
 pub fn reserve_dir(desired: &Path, policy: ClaimPolicy) -> Result<DirClaim, ClaimError> {
     if policy == ClaimPolicy::Ignore
-        && let Ok(md) = fs::symlink_metadata(desired) {
-            if md.is_dir() {
-                return Ok(DirClaim {
-                    path: desired.to_path_buf(),
-                    levels: 0,
-                    empty: false,
-                });
-            } else {
-                return Err(ClaimError::Io(io::Error::new(
-                    io::ErrorKind::AlreadyExists,
-                    "destination is not a directory",
-                )));
-            }
+        && let Ok(md) = fs::symlink_metadata(desired)
+    {
+        if md.is_dir() {
+            return Ok(DirClaim {
+                path: desired.to_path_buf(),
+                levels: 0,
+                empty: false,
+            });
+        } else {
+            return Err(ClaimError::Io(io::Error::new(
+                io::ErrorKind::AlreadyExists,
+                "destination is not a directory",
+            )));
         }
+    }
 
     if let Err(e) = fs::create_dir(desired) {
         if e.kind() != io::ErrorKind::AlreadyExists {
@@ -1335,7 +1340,10 @@ mod tests {
         let outcome = replace_dir(&src, &dst, ClaimPolicy::default()).unwrap();
         assert!(outcome.is_none());
         assert!(dst.exists());
-        assert_eq!(fs::read(dir.join("dir_1").join("data.txt")).unwrap(), b"123");
+        assert_eq!(
+            fs::read(dir.join("dir_1").join("data.txt")).unwrap(),
+            b"123"
+        );
         assert!(!src.exists());
         fs::remove_dir_all(&dir).unwrap();
     }
@@ -1354,4 +1362,3 @@ mod tests {
         fs::remove_dir_all(&dir).unwrap();
     }
 }
-

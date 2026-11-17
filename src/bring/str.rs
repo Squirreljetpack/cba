@@ -300,9 +300,10 @@ where
             let hi = chars.next();
             let lo = chars.next();
             if let (Some(hi), Some(lo)) = (hi, lo)
-                && let Ok(v) = u8::from_str_radix(&format!("{hi}{lo}"), 16) {
-                    return Ok(v as char);
-                }
+                && let Ok(v) = u8::from_str_radix(&format!("{hi}{lo}"), 16)
+            {
+                return Ok(v as char);
+            }
             Err('x')
         }
         'u' => {
@@ -315,9 +316,10 @@ where
                     hex.push(c);
                 }
                 if let Ok(v) = u32::from_str_radix(&hex, 16)
-                    && let Some(c) = char::from_u32(v) {
-                        return Ok(c);
-                    }
+                    && let Some(c) = char::from_u32(v)
+                {
+                    return Ok(c);
+                }
                 return Err('u');
             }
             Err('u')

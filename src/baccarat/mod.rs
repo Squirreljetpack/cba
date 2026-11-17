@@ -294,7 +294,6 @@ macro_rules! unwrap {
     };
 }
 
-
 #[cfg(test)]
 mod tests {
     #[test]

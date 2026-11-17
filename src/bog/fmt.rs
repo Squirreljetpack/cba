@@ -79,19 +79,17 @@ impl BogFmter for Fg {
         let (style, lvl) = match level {
             BogLevel::NOTE => (Style::new().fg_color(Some(AnsiColor::Blue.into())), "NOTE"),
             BogLevel::ERROR => (Style::new().fg_color(Some(AnsiColor::Red.into())), "ERRO"),
-            BogLevel::WARN | BogLevel::_WRN => {
-                (Style::new().fg_color(Some(AnsiColor::Yellow.into())), "WARN")
-            }
+            BogLevel::WARN | BogLevel::_WRN => (
+                Style::new().fg_color(Some(AnsiColor::Yellow.into())),
+                "WARN",
+            ),
             BogLevel::INFO | BogLevel::_NFO => {
                 (Style::new().fg_color(Some(AnsiColor::Green.into())), "INFO")
             }
             BogLevel::DEBUG => (Style::new().fg_color(Some(AnsiColor::Cyan.into())), "DBUG"),
             BogLevel::EMPTY => (Style::new().fg_color(Some(AnsiColor::Black.into())), ""),
             BogLevel::___ => (Style::new(), ""),
-            BogLevel::CUSTOM(s) => (
-                Style::new().fg_color(Some(AnsiColor::BrightCyan.into())),
-                s,
-            ),
+            BogLevel::CUSTOM(s) => (Style::new().fg_color(Some(AnsiColor::BrightCyan.into())), s),
         };
 
         let mut s = format!("{style}[{lvl}");

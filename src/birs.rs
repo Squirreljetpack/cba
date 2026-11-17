@@ -1,12 +1,9 @@
 use std::path::PathBuf;
 
-pub use dirs::home_dir;
 pub use crate::bath::expand_tilde;
+pub use dirs::home_dir;
 
-fn env_override(
-    name: &str,
-    suffix: &str,
-) -> Option<PathBuf> {
+fn env_override(name: &str, suffix: &str) -> Option<PathBuf> {
     let var = format!("{}_{}", name.to_uppercase().replace('-', "_"), suffix);
     let path = PathBuf::from(std::env::var_os(&var)?);
     if path.exists() {

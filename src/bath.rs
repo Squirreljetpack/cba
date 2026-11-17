@@ -90,7 +90,6 @@ pub impl<T: AsRef<Path>> T {
             .is_some_and(std::path::is_separator)
     }
 
-
     /// Prepend base to current path then normalize.
     ///
     /// # Example
