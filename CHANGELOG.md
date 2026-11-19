@@ -1,3 +1,18 @@
+## [0.8.2] - 2026-11-19
+
+### 🚀 Features
+
+- *(birs)* Platform config, cache and state directories with environment overrides
+- *(bath)* `PathExt::ends_in_separator`
+- Rename the `claim` module and feature to `blaim`
+
+### 🐛 Bug Fixes
+
+- *(io)* Keep symlinked destinations when writing atomically
+- *(blaim)* Compile on Windows
+- *(blaim)* Treat a taken directory name as claimed
+- More specific deserialization error messages
+
 ## [0.8.1] - 2026-10-30
 
 ### 📚 Documentation
