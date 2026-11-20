@@ -79,10 +79,11 @@ impl Command {
     }
 
     /// Detach the command.
-    /// Does nothing on unsupported platforms (not windows or unix).
+    /// Does nothing on unsupported platforms (not windows or unix), nor on BrowserPod,
+    /// whose `pre_exec` hooks hang the spawning process.
     pub fn detach(&mut self) -> &mut Self {
         cfg_if! {
-            if #[cfg(unix)] {
+            if #[cfg(all(unix, not(target_vendor = "browserpod")))] {
                 use std::os::unix::process::CommandExt;
 
                 unsafe {
@@ -272,21 +273,14 @@ pub fn shell_quote(s: impl AsRef<OsStr>) -> Option<String> {
 
 fn shell_quote_impl(s: &str) -> String {
     if cfg!(windows) {
-        if &SHELL.0 == "cmd.exe" {
+        if current_shell() == "cmd.exe" {
             let mut quoted = String::new();
             quoted.push('"');
 
             for c in s.chars() {
                 match c {
                     '"' => quoted.push_str(r#""""#),
-
-                    '&' | '|' | '<' | '>' | '^' => {
-                        quoted.push('^');
-                        quoted.push(c);
-                    }
-
                     '%' => quoted.push_str("%%"),
-
                     _ => quoted.push(c),
                 }
             }
@@ -348,7 +342,7 @@ pub fn format_sh_command(inputs: &[impl AsRef<OsStr>], double: bool) -> OsString
                 cmd.push(os);
             }
             #[cfg(target_os = "windows")]
-            Some(s) if &SHELL.0 != "cmd.exe" => {
+            Some(s) if current_shell() != "cmd.exe" => {
                 let escaped = s.replace('\'', "''");
                 cmd.push("'");
                 cmd.push(escaped);
