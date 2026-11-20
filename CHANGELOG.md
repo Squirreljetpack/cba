@@ -1,3 +1,10 @@
+## [0.8.3] - 2026-11-20
+
+### 🐛 Bug Fixes
+
+- *(broc)* Skip `pre_exec` detachment on BrowserPod, where the hooks hang the spawning process
+- *(broc)* Stop caret-escaping `& | < > ^` inside quoted `cmd.exe` arguments
+
 ## [0.8.2] - 2026-11-19
 
 ### 🚀 Features
